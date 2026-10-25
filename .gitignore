@@ -6,9 +6,6 @@ vscode/PROGRESS.md
 ARCHITECTURE.md
 DESIGN.md
 target/
-ARCHITECTURE.md
-DESIGN.md
-vscode/PROGRESS.md
 .DS_Store
 *.code-workspace
 **/vast-master.code-workspace
@@ -18,24 +15,12 @@ chrome/node_modules/
 chrome/*.zip
 # Example app build output
 examples/*/dist/
-# VS Code extension build artefacts — never commit pre-built VSIXs or compiled output.
+# VS Code extension packages and compiled output are built by release CI.
 # The release workflow attaches them to GitHub Releases instead so
 # provenance is tied to the CI run that built them.
 vscode/*.vsix
 vscode/out/
 .vscode/
-# npm package — generated files from wasm-pack + assemble.js.
-# These are built by CI (build-wasm job) and published from there.
-# Hand-written sources (index.js, index.cjs, index.d.ts, package.json,
-# README.md, scripts/) remain tracked.
-npm/vastlint_wasm.js
-npm/vastlint_wasm.d.ts
-npm/vastlint_wasm_bg.js
-npm/vastlint_wasm_bg.wasm
-npm/vastlint_wasm_bg.wasm.d.ts
-npm/vastlint_wasm_cjs.js
-npm/pkg/
-npm/pkg-node/
 node_modules/
 
 # GCP service-account credential files — must never be committed

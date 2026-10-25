@@ -1474,9 +1474,9 @@ dependencies = [
 
 [[package]]
 name = "vastlint-core"
-version = "0.15.3"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1c7cef30a39e8a0fadcb4c6dd5a5854b21116b85198b5916b47d2a31c702228"
+checksum = "9d7f2dec4cf7da01c78a35526c0d5495ff8a604f08e5782b7ca2484844089768"
 dependencies = [
  "phf",
  "quick-xml",

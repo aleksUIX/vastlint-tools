@@ -5,7 +5,7 @@ export MCP_BINARY="${CARGO_TARGET_DIR:-target}/release/vastlint-mcp"
 
 # Build MCP server (release)
 cargo build --release -p vastlint-mcp
-# MCP smoke : initialize + tools/list returns 5 tools
+# MCP smoke : initialize + tools/list returns 7 tools
 RESPONSE=$(
   (
     echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1.0"}}}'
