@@ -8,3 +8,9 @@ rust-version = "1.91"
 [profile.dev]
 debug = 0
 incremental = false
+
+# Match the optimized MCP builds from the original workspace.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true

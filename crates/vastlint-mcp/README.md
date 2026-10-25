@@ -20,6 +20,7 @@ Part of the [IAB Tech Lab AAMP](https://iabtechlab.com/standards/aamp-agentic-ad
 | `list_rules` | List all validation rules with IDs, severities, and descriptions. |
 | `explain_rule` | Get full details and fix guidance for a specific rule ID. |
 | `fix_vast` | Auto-fix deterministic issues in a VAST XML string. |
+| `get_adcp_capabilities` | Discover supported AdCP protocols and creative validation capabilities. |
 
 Full rule reference with examples and fix guidance: [vastlint.org/docs/rules](https://vastlint.org/docs/rules/)
 
@@ -100,7 +101,7 @@ ARTF agent container at the MCP endpoint to validate VAST tags before impression
 ## Install
 
 ```sh
-cargo install vastlint-mcp
+cargo install --git https://github.com/aleksUIX/vastlint-tools --locked vastlint-mcp
 ```
 
 Local Docker (stdio). Build from the repo root. Point Glama's Dockerfile admin at `Dockerfile.mcp`, not the CLI `Dockerfile`.

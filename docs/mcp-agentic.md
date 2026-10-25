@@ -66,7 +66,7 @@ Restart Claude Desktop. You can now ask: *"Validate this VAST tag"*, *"Why is im
 ### Local stdio install (air-gapped / low-latency)
 
 ```sh
-cargo install vastlint-mcp
+cargo install --git https://github.com/aleksUIX/vastlint-tools --locked vastlint-mcp
 ```
 
 ```json
@@ -312,8 +312,8 @@ The local binary is the right choice for latency-sensitive SSAI pipelines and AR
 ## See also
 
 - [`crates/vastlint-mcp`](../crates/vastlint-mcp/README.md) - full tool schema reference
-- [Common errors](common-errors.md) - the VAST mistakes that cost real money
-- [Tutorial](tutorial.md) - getting started with VAST validation
+- [Common errors](https://github.com/aleksUIX/vastlint/blob/main/docs/common-errors.md) - the VAST mistakes that cost real money
+- [Tutorial](https://github.com/aleksUIX/vastlint/blob/main/docs/tutorial.md) - getting started with VAST validation
 - [Rule reference](https://vastlint.org/docs/rules) - all 246 rules with examples and fix instructions
 - [IAB Tech Lab AAMP](https://iabtechlab.com/standards/aamp-agentic-advertising-management-protocols/)
 - [IAB Tech Lab ARTF](https://iabtechlab.com/standards/artf/)

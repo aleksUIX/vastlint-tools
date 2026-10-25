@@ -16,7 +16,8 @@
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "test": "npm run test --workspaces",
-    "check:core": "node scripts/check-core-version.mjs"
+    "check:core": "node scripts/check-core-version.mjs",
+    "test:release": "node --test test/publish-js.test.mjs"
   },
   "engines": {
     "node": ">=22"

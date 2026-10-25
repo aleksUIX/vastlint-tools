@@ -118,6 +118,8 @@ jobs:
         run: npm ci
       - name: Run frontend package tests
         run: npm test
+      - name: Test publication recovery
+        run: npm run test:release
       - name: Prepare tool npm packages
         run: |-
           VERSION="$(printf '%s' "$RELEASE_TAG" | sed 's/^v//')"
@@ -392,18 +394,7 @@ jobs:
       - name: Publish client and React packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          set -euo pipefail
-          STAGE="$GITHUB_WORKSPACE/.release/js-packages"
-          for name in vastlint-client vastlint-react; do
-            directory="$STAGE/$name"
-            version="$(node -p "require('./.release/js-packages/' + '$name' + '/package.json').version")"
-            if npm view "$name@$version" version >/dev/null 2>&1; then
-              echo "$name@$version is already published"
-              continue
-            fi
-            (cd "$directory" && npm publish --provenance)
-          done
+        run: bash scripts/publish-js-packages.sh .release/js-packages
   publish-vscode:
     name: Publish VS Code Extension
     needs:

@@ -147,6 +147,8 @@ jobs:
         run: npm run typecheck
       - name: Test frontend packages
         run: npm test
+      - name: Test publication recovery
+        run: npm run test:release
       - name: Build browser example
         working-directory: examples/vastlint-client-browser
         run: |-

@@ -78,7 +78,7 @@ Full rule reference with examples and fix guidance: [vastlint.org/docs/rules](ht
 
 Canonical rule catalog:
 
-- [RULES.md](../RULES.md) in this repo
+- [RULES.md](https://github.com/aleksUIX/vastlint/blob/main/RULES.md) in the engine repository
 - [vastlint.org/docs/rules](https://vastlint.org/docs/rules/) for the hosted per-rule pages
 
 <details>
@@ -156,7 +156,7 @@ Canonical rule catalog:
 
 ### CTV Addendum 2024 rules
 
-Supplied standardized payloads are checked by default. Legacy tags do not need to include optional addendum features. See [supported encodings](../docs/ctv-addendum-2024.md).
+Supplied standardized payloads are checked by default. Legacy tags do not need to include optional addendum features. See [supported encodings](https://github.com/aleksUIX/vastlint/blob/main/docs/ctv-addendum-2024.md).
 
 | Rule | Severity | Description |
 |------|----------|-------------|

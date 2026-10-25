@@ -44,7 +44,7 @@ Tags sent to the hosted endpoint may be stored with identifiers stripped. See ht
 Needs a Rust toolchain. Then:
 
 ```sh
-cargo install vastlint-mcp
+cargo install --git https://github.com/aleksUIX/vastlint-tools --locked vastlint-mcp
 ```
 
 ```json
@@ -74,7 +74,7 @@ In a session, `/mcp` should show vastlint connected. `/plugin` should list skill
 
 ## Post-install check
 
-Reload MCP servers. Confirm these six tools exist: `validate_vast`, `validate_vast_url`, `inspect_vast`, `list_rules`, `explain_rule`, `fix_vast`.
+Reload MCP servers. Confirm these seven tools exist: `validate_vast`, `validate_vast_url`, `inspect_vast`, `list_rules`, `explain_rule`, `fix_vast`, `get_adcp_capabilities`.
 
 Ask the user to run:
 

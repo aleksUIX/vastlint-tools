@@ -10,7 +10,7 @@ Tools tags use `vMAJOR.MINOR.PATCH`. The release workflow stamps the application
 
 ## Verify a release before tagging it.
 
-Run the Rust tests, formatting and Clippy checks, the frontend typecheck and tests, the MCP protocol smoke tests, both extension builds and tests, and all example builds. CI and release workflows retain these checks.
+Run the Rust tests, formatting and Clippy checks, the frontend typecheck and tests, publication recovery tests (`npm run test:release`), the MCP protocol smoke tests, both extension builds and tests, and all example builds. CI and release workflows retain these checks.
 
 Release builds consume published VASTlint packages. They do not build an engine from a private or sibling checkout.
 
@@ -37,3 +37,5 @@ The release workflow runs MCP protocol checks, builds the four native MCP archiv
 The engine npm package, crates.io engine and CLI crates, gRPC image, native FFI/NIF artifacts, binding synchronization, Homebrew synchronization and engine-to-infrastructure synchronization remain in the engine release workflow.
 
 A tools contribution can be agreed separately in the future. Keeping this repository public does not transfer its publisher accounts or assign ownership of the tools to another organization.
+
+Keep the versions in `.claude-plugin/plugin.json`, `plugin.json` and `gemini-extension.json` aligned with the intended tools version before tagging. Historical binaries remain available in the engine repository releases; the first tools release creates the new download location.
