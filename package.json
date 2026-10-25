@@ -1,0 +1,24 @@
+{
+  "name": "vastlint-tools",
+  "version": "0.16.0",
+  "private": true,
+  "description": "OpenAdTech applications and integrations built on the public VASTlint engine.",
+  "author": "Aleksander Sekowski <aleks@vastlint.org>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aleksUIX/vastlint-tools.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces",
+    "check:core": "node scripts/check-core-version.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

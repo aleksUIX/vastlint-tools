@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 // Import types only from the package (compile-time, no runtime cost).
-import type { Issue, RuleMeta } from 'vastlint';
+import type { Issue, RuleMeta } from 'vastlint-engine';
 import { applyTemplateIgnore, extractVastBlocks, mapBlockIssuePosition, type VastBlock } from './utils';
 // Use the CJS entry directly at runtime — the package has "type":"module" which
 // causes Node v22 to pick the ESM loader, breaking __dirname and WASM init.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { validateWithOptions, rules, fix } = require('vastlint/index.cjs') as Pick<typeof import('vastlint'), 'validateWithOptions' | 'rules' | 'fix'>;
+const { validateWithOptions, rules, fix } = require('vastlint-engine/index.cjs') as Pick<typeof import('vastlint-engine'), 'validateWithOptions' | 'rules' | 'fix'>;
 
 // ── Rule catalog ─────────────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "vastlint": "file:../../npm",
+    "vastlint": "0.15.3",
     "vastlint-client": "file:../../packages/vastlint-client",
     "vastlint-react": "file:../../packages/vastlint-react"
   },

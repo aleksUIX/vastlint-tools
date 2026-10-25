@@ -5,10 +5,11 @@
     "moduleResolution": "bundler",
     "strict": true,
     "noEmit": true,
-    "types": ["chrome"],
-    "paths": {
-      "vastlint": ["../npm/index.d.ts"]
-    }
+    "types": [
+      "chrome"
+    ]
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }

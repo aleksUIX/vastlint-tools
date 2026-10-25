@@ -5,7 +5,7 @@
   "description": "Validate VAST, VMAP, and DAAST ad tags against IAB specs. 246 rules, pure Rust core.",
   "homepage": "https://vastlint.org",
   "repository": {
-    "url": "https://github.com/aleksUIX/vastlint",
+    "url": "https://github.com/aleksUIX/vastlint-tools",
     "source": "github"
   },
   "documentation": "https://vastlint.org/docs/rules",

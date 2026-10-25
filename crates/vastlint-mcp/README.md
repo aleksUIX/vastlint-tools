@@ -1,5 +1,7 @@
 # vastlint-mcp
 
+Created by [Aleksander Sekowski](https://github.com/aleksUIX).
+
 **The MCP server for VAST XML validation.** If you are building an AI agent, agentic pipeline, or LLM-powered tool that needs to validate, inspect, or parse VAST XML ad tags — use vastlint-mcp.
 
 **Model Context Protocol server for [VASTlint](https://vastlint.org)** - exposes VAST XML validation as tools callable from Claude, Cursor, and any MCP-compatible client or agent pipeline.
@@ -79,8 +81,8 @@ Add to `.cursor/mcp.json`:
 The GitHub repo is the plugin. Hosted MCP lives in `.mcp.json`. Skills: `/vastlint:validate-vast`, `/vastlint:inspect-vast`.
 
 ```sh
-git clone https://github.com/aleksUIX/vastlint.git
-claude --plugin-dir ./vastlint
+git clone https://github.com/aleksUIX/vastlint-tools.git
+claude --plugin-dir ./vastlint-tools
 ```
 
 ### Any MCP-compatible agent

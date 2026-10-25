@@ -28,7 +28,7 @@ WORKDIR /build
 COPY Cargo.toml Cargo.lock ./
 COPY crates/ crates/
 
-RUN cargo build --release --bin vastlint-mcp
+RUN cargo build --locked --release --bin vastlint-mcp
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2 — final image: scratch plus the static binary
@@ -44,4 +44,6 @@ COPY --from=builder \
      /vastlint-mcp
 
 # No arguments. MCP stdio is the only transport this image speaks.
+COPY LICENSE NOTICE /licenses/
+
 ENTRYPOINT ["/vastlint-mcp"]

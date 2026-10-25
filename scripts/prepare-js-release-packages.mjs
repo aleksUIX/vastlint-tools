@@ -19,17 +19,9 @@ const stageRoot = stageRootArg
   ? path.resolve(stageRootArg)
   : path.join(repoRoot, ".release", "js-packages");
 
+const coreVersion = fs.readFileSync(path.join(repoRoot, "core-version.txt"), "utf8").trim();
+
 const packageConfigs = [
-  {
-    name: "vastlint",
-    sourceDir: path.join(repoRoot, "npm"),
-    stageDir: path.join(stageRoot, "vastlint"),
-    requiredFiles: ["index.js", "index.d.ts", "README.md"],
-    rewriteManifest(packageJson) {
-      packageJson.version = version;
-      return packageJson;
-    },
-  },
   {
     name: "vastlint-client",
     sourceDir: path.join(repoRoot, "packages", "vastlint-client"),
@@ -40,7 +32,7 @@ const packageConfigs = [
       delete packageJson.private;
       packageJson.dependencies = {
         ...(packageJson.dependencies ?? {}),
-        vastlint: `^${version}`,
+        vastlint: coreVersion,
       };
       return packageJson;
     },
@@ -70,7 +62,13 @@ for (const packageConfig of packageConfigs) {
     throw new Error(`Missing source directory for ${packageConfig.name}: ${packageConfig.sourceDir}`);
   }
 
-  fs.cpSync(packageConfig.sourceDir, packageConfig.stageDir, { recursive: true });
+  fs.cpSync(packageConfig.sourceDir, packageConfig.stageDir, {
+    recursive: true,
+    filter: (entry) => path.basename(entry) !== "node_modules",
+  });
+  for (const name of ["LICENSE", "NOTICE"]) {
+    fs.copyFileSync(path.join(repoRoot, name), path.join(packageConfig.stageDir, name));
+  }
 
   const manifestPath = path.join(packageConfig.stageDir, "package.json");
   const packageJson = JSON.parse(fs.readFileSync(manifestPath, "utf8"));

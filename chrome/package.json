@@ -1,6 +1,7 @@
 {
   "name": "vastlint-extension",
-  "version": "0.15.3",
+  "author": "Aleksander Sekowski <aleks@vastlint.org>",
+  "version": "0.16.0",
   "private": true,
   "description": "Chrome extension that detects VAST XML in the DOM and displays inline validation errors/warnings powered by VASTlint WASM",
   "scripts": {
@@ -10,7 +11,7 @@
     "test": "node --test test/build.test.mjs"
   },
   "dependencies": {
-    "vastlint": "file:../npm"
+    "vastlint": "0.15.3"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.299",

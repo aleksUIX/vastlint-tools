@@ -66,11 +66,11 @@ Do not set env vars. Local stdio does not send tags.
 The GitHub repo is the plugin. Manifest: `.claude-plugin/plugin.json`. MCP: `.mcp.json` (hosted URL, auth none). Skills: `/vastlint:validate-vast`, `/vastlint:inspect-vast`. Agent: `vast-tag-reviewer`.
 
 ```sh
-git clone https://github.com/aleksUIX/vastlint.git
-claude --plugin-dir ./vastlint
+git clone https://github.com/aleksUIX/vastlint-tools.git
+claude --plugin-dir ./vastlint-tools
 ```
 
-In a session, `/mcp` should show vastlint connected. `/plugin` should list skills. Community marketplace submit: https://platform.claude.com/plugins/submit (paste the GitHub URL). Team orgs can also use https://claude.ai/admin-settings/directory/submissions/plugins/new. Run `claude plugin validate ./vastlint` before submit. Do not put `skills/` inside `.claude-plugin/`.
+In a session, `/mcp` should show vastlint connected. `/plugin` should list skills. Community marketplace submit: https://platform.claude.com/plugins/submit (paste the GitHub URL). Team orgs can also use https://claude.ai/admin-settings/directory/submissions/plugins/new. Run `claude plugin validate ./vastlint-tools` before submit. Do not put `skills/` inside `.claude-plugin/`.
 
 ## Post-install check
 

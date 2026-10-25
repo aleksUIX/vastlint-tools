@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vastlint": "file:../../npm",
+    "vastlint": "0.15.3",
     "vastlint-client": "file:../../packages/vastlint-client"
   },
   "devDependencies": {

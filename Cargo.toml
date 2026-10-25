@@ -1,0 +1,10 @@
+[workspace]
+members = ["crates/vastlint-mcp"]
+resolver = "2"
+
+[workspace.package]
+rust-version = "1.91"
+
+[profile.dev]
+debug = 0
+incremental = false

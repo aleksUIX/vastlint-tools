@@ -4,15 +4,15 @@
   "private": true,
   "description": "Headless React hooks for the VASTlint client runtime.",
   "license": "Apache-2.0",
-  "author": "Alex Sekowski <alex@vastlint.org>",
+  "author": "Aleksander Sekowski <alex@vastlint.org>",
   "homepage": "https://vastlint.org",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aleksUIX/vastlint.git",
+    "url": "https://github.com/aleksUIX/vastlint-tools.git",
     "directory": "packages/vastlint-react"
   },
   "bugs": {
-    "url": "https://github.com/aleksUIX/vastlint/issues"
+    "url": "https://github.com/aleksUIX/vastlint-tools/issues"
   },
   "keywords": [
     "vast",
@@ -36,7 +36,9 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json",

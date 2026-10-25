@@ -42,3 +42,8 @@ node_modules/
 gen-lang-client-*.json
 *-service-account*.json
 
+
+# Local build and release staging
+.release/
+.cache/
+*.tgz

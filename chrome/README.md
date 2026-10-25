@@ -1,5 +1,7 @@
 # VASTlint - Chrome Extension
 
+Created by [Aleksander Sekowski](https://github.com/aleksUIX).
+
 Detects VAST XML anywhere on a page and displays inline validation errors, warnings, and info messages powered by the **VASTlint WASM core**. Covers IAB VAST 2.0–4.4, SIMID interactive creatives, and VPAID detection.
 
 Full documentation, web validator, and rule reference: [vastlint.org](https://vastlint.org) · [vastlint.org/docs/rules](https://vastlint.org/docs/rules/)
@@ -38,21 +40,19 @@ chrome/
 
 ### Prerequisites
 
-- Node.js ≥ 20
-- The WASM package must be built first:
+- Node.js 22 or later.
+- The published engine is installed by `npm ci`; no Rust checkout is needed.
 
-```bash
-cd ../npm
-npm run build   # runs wasm-pack for bundler + node targets
-```
+### Install and build
 
-### Install & build
+From the repository root:
 
-```bash
+```sh
 cd chrome
-npm install
-npm run build        # production build → dist/
-npm run dev          # watch mode
+npm ci
+npm run build
+npm test
+npm run dev
 ```
 
 ### Load in Chrome
@@ -67,7 +67,7 @@ npm run dev          # watch mode
 ```bash
 npm run build
 # zip dist/ and upload to the Chrome Web Store
-zip -r vastlint-chrome.zip dist/
+(cd dist && zip -r ../vastlint-chrome.zip .)
 ```
 
 ## Architecture notes

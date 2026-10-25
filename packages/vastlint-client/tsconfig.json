@@ -3,17 +3,18 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "strict": true,
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
-    "baseUrl": ".",
-    "paths": {
-      "vastlint": ["../../npm/index.d.ts"]
-    },
     "skipLibCheck": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }

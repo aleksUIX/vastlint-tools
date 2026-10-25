@@ -1,5 +1,7 @@
 # vastlint-client
 
+Created by [Aleksander Sekowski](https://github.com/aleksUIX).
+
 Headless VAST session/runtime package for the `vastlint` monorepo.
 
 **React bindings & guide:** [vastlint.org/docs/vastlint-react](https://vastlint.org/docs/vastlint-react/) · **Web validator:** [vastlint.org/validate](https://vastlint.org/validate)

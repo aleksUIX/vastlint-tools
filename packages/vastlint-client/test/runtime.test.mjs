@@ -14,9 +14,7 @@ const fixturesDir = path.resolve(
   "..",
   "..",
   "..",
-  "crates",
-  "vastlint-core",
-  "tests",
+  "test",
   "fixtures",
 );
 

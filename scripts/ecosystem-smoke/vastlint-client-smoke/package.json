@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "vastlint-client": "0.4.22"
+    "vastlint-client": "0.15.3"
   }
 }

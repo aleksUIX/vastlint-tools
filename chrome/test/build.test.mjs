@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { cp, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -23,10 +23,15 @@ async function eventually(check, logs) {
 }
 
 test('watch builds retain every runtime asset and reload atomically replaced HTML', { timeout: 30_000 }, async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'vastlint-chrome-build-'));
+  const workspace = await mkdtemp(join(tmpdir(), 'vastlint-chrome-build-'));
+  const directory = join(workspace, 'chrome');
   let child;
   let logs = '';
   try {
+    await mkdir(directory);
+    for (const name of ['LICENSE', 'NOTICE']) {
+      await cp(join(project, '..', name), join(workspace, name));
+    }
     for (const name of ['src', 'manifest.json', 'esbuild.config.mjs']) {
       await cp(join(project, name), join(directory, name), { recursive: true });
     }
@@ -52,6 +57,12 @@ test('watch builds retain every runtime asset and reload atomically replaced HTM
       await readFile(join(directory, 'dist/vastlint_wasm_bg.wasm')),
       await readFile(join(project, 'node_modules/vastlint/vastlint_wasm_bg.wasm')),
     );
+    for (const name of ['LICENSE', 'NOTICE']) {
+      assert.deepEqual(
+        await readFile(join(directory, 'dist', name)),
+        await readFile(join(workspace, name)),
+      );
+    }
     await assert.rejects(readFile(join(directory, 'dist/icons/.private-file')), { code: 'ENOENT' });
     for (const label of ['first', 'second']) {
       const html = `<p>${label} static asset update</p>`;
@@ -68,6 +79,6 @@ test('watch builds retain every runtime asset and reload atomically replaced HTM
       child.kill('SIGTERM');
       await stopped;
     }
-    await rm(directory, { recursive: true, force: true });
+    await rm(workspace, { recursive: true, force: true });
   }
 });

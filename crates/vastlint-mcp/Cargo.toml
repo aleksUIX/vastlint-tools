@@ -1,12 +1,12 @@
 [package]
 name = "vastlint-mcp"
-version = "0.15.3"
+version = "0.16.0"
 edition = "2021"
 rust-version = "1.86"
-authors = ["Aleks <aleks@vastlint.org>"]
-description = "MCP server for VASTlint — exposes VAST XML validation as tools callable by AI agents and ARTF-compliant buyer/seller agent systems"
+authors = ["Aleksander Sekowski <aleks@vastlint.org>"]
+description = "MCP server for VASTlint, exposing validation tools for AI agents and advertising systems"
 license = "Apache-2.0"
-repository = "https://github.com/aleksUIX/vastlint"
+repository = "https://github.com/aleksUIX/vastlint-tools"
 homepage = "https://vastlint.org"
 readme = "README.md"
 keywords = ["vast", "mcp", "ai-agent", "adtech", "iab"]
@@ -17,7 +17,7 @@ name = "vastlint-mcp"
 path = "src/main.rs"
 
 [dependencies]
-vastlint-core = { path = "../vastlint-core", version = "0.15.3" }
+vastlint-core = "=0.15.3"
 
 # MCP SDK — stdio transport (spec-compliant, works with Claude, Cursor, ARTF)
 rmcp = { version = "3", features = ["server", "transport-io", "schemars"] }

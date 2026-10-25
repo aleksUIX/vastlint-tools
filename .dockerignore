@@ -34,3 +34,15 @@ secrets/
 
 # Test fixtures already embedded in the crate — scratch XMLs not needed
 scratch/*.xml
+
+# Local build and release staging
+.release/
+.cache/
+*.tgz
+
+node_modules/
+**/node_modules/
+chrome/
+vscode/
+packages/
+examples/

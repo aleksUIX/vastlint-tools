@@ -1,5 +1,7 @@
 # vastlint-react
 
+Created by [Aleksander Sekowski](https://github.com/aleksUIX).
+
 Headless React bindings for `vastlint-client`.
 
 **Guide:** [vastlint.org/docs/vastlint-react](https://vastlint.org/docs/vastlint-react/) · **Web validator:** [vastlint.org/validate](https://vastlint.org/validate)

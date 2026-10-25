@@ -13,6 +13,8 @@ const assets = [
   ['src/popup/popup.html', 'dist/popup.html'],
   ['src/analysis/analysis.html', 'dist/analysis.html'],
   ['manifest.json', 'dist/manifest.json'],
+  ['../LICENSE', 'dist/LICENSE'],
+  ['../NOTICE', 'dist/NOTICE'],
   ['node_modules/vastlint/vastlint_wasm_bg.wasm', 'dist/vastlint_wasm_bg.wasm'],
   ['src/icons', 'dist/icons'],
 ];
