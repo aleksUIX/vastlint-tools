@@ -16,6 +16,8 @@ Release builds consume published VASTlint packages. They do not build an engine 
 
 ## Configure publishing in this repository.
 
+First-release setup is pending. Before creating a tools tag, configure the `production` environment with the agreed reviewer policy and the `patch` environment. A workflow environment name alone does not configure an approval rule. Then configure the publisher credentials and switches below.
+
 Repository secrets and npm trusted-publisher settings do not transfer automatically with source files. Configure the retained accounts for `aleksUIX/vastlint-tools` before enabling publication.
 
 - `ENABLE_NPM_PUBLISH=true`: publish `vastlint-client` and `vastlint-react`. Configure npm trusted publishing for this repository and `release.yml`, or provide `NPM_TOKEN`.
