@@ -12,4 +12,4 @@ The moved application source includes Chrome and VS Code extensions, the MCP ser
 
 Historical source links and prior engine releases remain useful provenance for versions released before the split. The existing publisher accounts, extension IDs, package names and MCP Registry name are preserved.
 
-The migration also preserves the application version and publisher dependency updates from source commit `0add5d6` (the concurrent engine v0.16.0 change). Applications keep the working published 0.15.3 engine pin until an explicit SDK update.
+The migration also preserves the application version and publisher dependency updates from source commit `0add5d6` (the concurrent engine v0.16.0 change). Applications pin the published 0.16.2 engine; later engine updates are explicit pin changes recorded in the changelog.

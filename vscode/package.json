@@ -117,7 +117,7 @@
     "test": "npm run compile-emit && node --test test/utils.test.mjs"
   },
   "dependencies": {
-    "vastlint-engine": "npm:vastlint@0.16.0"
+    "vastlint-engine": "npm:vastlint@0.16.2"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
