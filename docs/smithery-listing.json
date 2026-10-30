@@ -1,0 +1,8 @@
+{
+  "displayName": "VASTlint",
+  "description": "Validate VAST, VMAP and DAAST ad tags against IAB specifications, including SIMID and OMID checks. The public tools validate_vast, validate_vast_url, inspect_vast, list_rules, explain_rule and fix_vast require no login. Connect directly to https://vastlint.org/mcp. AdCP content-standards tools require Bearer authentication. Hosted submissions may be stored with identifiers stripped to improve validation rules; see https://vastlint.org/privacy/. Local vastlint-mcp over stdio keeps tags on your machine. Built on the open-source Rust validation core. Apache-2.0 licensed.",
+  "homepage": "https://vastlint.org",
+  "repositoryUrl": "https://github.com/aleksUIX/vastlint-tools",
+  "backlinkUrl": "https://vastlint.org/docs/mcp/",
+  "license": "Apache-2.0"
+}
