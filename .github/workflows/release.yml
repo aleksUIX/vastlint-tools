@@ -508,31 +508,3 @@ jobs:
           # Treat duplicate-version as success : registry already has this release.
           echo "$out" | grep -q "cannot publish duplicate version" && exit 0
           exit 1
-  publish-smithery:
-    name: Publish to Smithery
-    needs:
-      - approve
-      - build
-      - release
-    runs-on: ubuntu-latest
-    if: vars.ENABLE_SMITHERY_PUBLISH == 'true'
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ env.RELEASE_TAG }}
-      - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version: '24'
-      - name: Publish to Smithery
-        env:
-          SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
-        run: "# CLI syntax changed in @smithery/cli \u2265 1.x:\n#   publish <url> -n <name>    (URL-based / remote server)\n\
-          # The --config / --key flags were removed; the API key is read\n# from the SMITHERY_API_KEY environment variable\
-          \ automatically.\nout=$(npx --yes @smithery/cli@latest mcp publish \\\n  \"https://vastlint.org/mcp\" \\\n  -n \"\
-          io.github.aleksUIX/vastlint\" 2>&1) && echo \"$out\" && exit 0\necho \"$out\"\n# Treat \"Namespace not found\" (one-time\
-          \ setup not done yet),\n# duplicate/already-published, and Smithery API retirements as non-fatal.\necho \"$out\"\
-          \ | grep -qiE \"namespace not found|already exists|duplicate|updating servers has been removed\" && exit 0\nexit\
-          \ 1\n"

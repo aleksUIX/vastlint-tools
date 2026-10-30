@@ -24,7 +24,6 @@ Repository secrets and npm trusted-publisher settings do not transfer automatica
 - `ENABLE_VSCODE_PUBLISH=true`: configure `VSCE_PAT` and `OVSX_TOKEN` for the existing publisher and Open VSX account.
 - `ENABLE_CHROME_PUBLISH=true`: configure `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET` and `CHROME_REFRESH_TOKEN`. Retain the existing extension ID.
 - `ENABLE_MCP_REGISTRY_PUBLISH=true`: GitHub OIDC publishes under the existing `io.github.aleksUIX/vastlint` namespace. The owner namespace stays unchanged; new binary URLs point to this repository.
-- `ENABLE_SMITHERY_PUBLISH=true`: configure `SMITHERY_API_KEY` for the existing server listing.
 
 The standalone Chrome workflow builds without publishing on pushes and pull requests. Its manual `publish` input remains available after credentials are configured.
 
