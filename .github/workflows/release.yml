@@ -508,3 +508,41 @@ jobs:
           # Treat duplicate-version as success : registry already has this release.
           echo "$out" | grep -q "cannot publish duplicate version" && exit 0
           exit 1
+  publish-smithery:
+    name: Maintain Smithery listing
+    needs:
+      - approve
+      - build
+      - release
+    runs-on: ubuntu-latest
+    if: vars.ENABLE_SMITHERY_PUBLISH == 'true'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - name: Check the existing Smithery listing
+        run: curl --fail --silent --show-error --location --retry 2 --max-time 60 --output /dev/null https://smithery.ai/servers/aleksander/vastlint
+      - name: Check Smithery API availability
+        id: smithery
+        run: |
+          if [[ "$(date -u +%F)" < "2026-10-31" ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Smithery API and CLI publication retired on October 31, 2026. The public listing remains available; clients use https://vastlint.org/mcp directly."
+          fi
+      - name: Set up Node.js
+        if: steps.smithery.outputs.publish == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+      - name: Refresh the existing Smithery server
+        if: steps.smithery.outputs.publish == 'true'
+        env:
+          SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
+        run: |
+          npx --yes @smithery/cli@4.11.1 mcp publish \
+            "https://vastlint.org/mcp" \
+            -n "aleksander/vastlint"

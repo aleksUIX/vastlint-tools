@@ -24,6 +24,9 @@ Repository secrets and npm trusted-publisher settings do not transfer automatica
 - `ENABLE_VSCODE_PUBLISH=true`: configure `VSCE_PAT` and `OVSX_TOKEN` for the existing publisher and Open VSX account.
 - `ENABLE_CHROME_PUBLISH=true`: configure `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET` and `CHROME_REFRESH_TOKEN`. Retain the existing extension ID.
 - `ENABLE_MCP_REGISTRY_PUBLISH=true`: GitHub OIDC publishes under the existing `io.github.aleksUIX/vastlint` namespace. The owner namespace stays unchanged; new binary URLs point to this repository.
+- `ENABLE_SMITHERY_PUBLISH=true`: maintain the existing `aleksander/vastlint` Smithery listing. The release job checks the public listing and refreshes it through the CLI before October 31, 2026, using `SMITHERY_API_KEY`. Smithery's name is separate from the MCP Registry name `io.github.aleksUIX/vastlint`.
+
+Smithery [retires its proxy, API, API keys and CLI on October 31, 2026](https://smithery.ai/future), while keeping its public directory. The Smithery release job skips CLI publication from that date and continues checking the listing. Clients connect directly to `https://vastlint.org/mcp`. Keep the existing listing and its verification; do not create a second server. The current listing metadata is recorded in `docs/smithery-listing.json`.
 
 The standalone Chrome workflow builds without publishing on pushes and pull requests. Its manual `publish` input remains available after credentials are configured.
 
