@@ -12,6 +12,7 @@ jobs:
   repair-smithery:
     if: inputs.tag == 'aleksander/vastlint'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -20,3 +21,16 @@ jobs:
         env:
           SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
         run: python3 scripts/repair-smithery-listing.py
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+      - name: Refresh tool discovery on the existing Smithery listing
+        env:
+          SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
+        run: |
+          npx --yes @smithery/cli@4.11.1 mcp publish \
+            "https://vastlint.org/mcp" \
+            -n "aleksander/vastlint"
+      - name: Verify the public tool catalog
+        run: python3 scripts/verify-smithery-tools.py
