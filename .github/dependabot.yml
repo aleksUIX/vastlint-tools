@@ -43,6 +43,8 @@ updates:
     - version-update:semver-minor
     - version-update:semver-major
     - version-update:semver-patch
+  # Pinned via npm overrides in package.json; @vscode/vsce requires ^10.2.6
+  - dependency-name: minimatch
 - package-ecosystem: npm
   directory: /
   schedule:
