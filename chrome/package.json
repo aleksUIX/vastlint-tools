@@ -14,7 +14,7 @@
     "vastlint": "0.16.2"
   },
   "devDependencies": {
-    "@types/chrome": "^0.0.299",
+    "@types/chrome": "^0.3.7",
     "esbuild": "^0.28.2",
     "typescript": "^6.0.3"
   }
