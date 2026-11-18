@@ -14,5 +14,8 @@
   "devDependencies": {
     "vite": "^6.4.5",
     "vite-plugin-wasm": "^3.5.0"
+  },
+  "overrides": {
+    "picomatch": "github:Arulraj-a2b/picomatch#d9a3f12faf186860cfc86c2834c41f38701152f2"
   }
 }

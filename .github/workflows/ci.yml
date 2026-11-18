@@ -36,7 +36,7 @@ jobs:
           check-latest: true
       - name: Audit runtime and development dependencies
         working-directory: ${{ matrix.directory }}
-        run: npm audit --audit-level=low
+        run: node "$GITHUB_WORKSPACE/scripts/check-npm-audit.mjs"
   test:
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
