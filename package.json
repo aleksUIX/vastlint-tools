@@ -1,6 +1,6 @@
 {
   "name": "vastlint-tools",
-  "version": "0.16.0",
+  "version": "0.16.3",
   "private": true,
   "description": "OpenAdTech applications and integrations built on the public VASTlint engine.",
   "author": "Aleksander Sekowski <aleks@vastlint.org>",

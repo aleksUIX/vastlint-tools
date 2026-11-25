@@ -1566,7 +1566,7 @@ dependencies = [
 
 [[package]]
 name = "vastlint-mcp"
-version = "0.16.0"
+version = "0.16.3"
 dependencies = [
  "mimalloc",
  "quick-xml",
