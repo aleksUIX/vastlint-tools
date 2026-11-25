@@ -16,9 +16,9 @@ Release builds consume published VASTlint packages. They do not build an engine 
 
 ## Configure publishing in this repository.
 
-The release environments are configured: `production` requires approval from `aleksUIX` and permits self-review; `patch` has no reviewer gate. Publisher credentials, switches and npm trusted publishing still need configuration before the first tools release. A workflow environment name alone does not configure an approval rule.
+To publish a single version to all tool registries, set the repository variable `TOOLS_PUBLISH_TAG` to the exact tag, such as `v0.16.3`, before pushing that tag. A manual retry must select the same tag as its workflow ref and tag input. A later version needs its own authorization. The `production` environment requires approval from `aleksUIX` for initial, minor and major releases. Patch releases use the `patch` environment.
 
-Repository secrets and npm trusted-publisher settings do not transfer automatically with source files. Configure the retained accounts for `aleksUIX/vastlint-tools` before enabling publication.
+The repository holds the publisher credentials for the existing listings. For ongoing publication to individual destinations, the workflow also supports these repository variables:
 
 - `ENABLE_NPM_PUBLISH=true`: publish `vastlint-client` and `vastlint-react`. Configure npm trusted publishing for this repository and `release.yml`, or provide `NPM_TOKEN`.
 - `ENABLE_VSCODE_PUBLISH=true`: configure `VSCE_PAT` and `OVSX_TOKEN` for the existing publisher and Open VSX account.

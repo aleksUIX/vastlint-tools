@@ -271,6 +271,8 @@ jobs:
       - run: echo "Release approved (${{ needs.classify.outputs.bump }}); publish jobs may proceed"
   approve:
     name: Release gate
+    outputs:
+      publish_tag: ${{ github.ref_type == 'tag' && vars.TOOLS_PUBLISH_TAG == github.ref_name && (github.event_name == 'push' || inputs.tag == github.ref_name) }}
     needs:
       - wait-for-approval
       - classify
@@ -373,7 +375,7 @@ jobs:
       - build-js
       - release
     runs-on: ubuntu-latest
-    if: vars.ENABLE_NPM_PUBLISH == 'true'
+    if: vars.ENABLE_NPM_PUBLISH == 'true' || needs.approve.outputs.publish_tag == 'true'
     permissions:
       contents: read
       id-token: write
@@ -402,7 +404,7 @@ jobs:
       - build-extensions
       - release
     runs-on: ubuntu-latest
-    if: vars.ENABLE_VSCODE_PUBLISH == 'true'
+    if: vars.ENABLE_VSCODE_PUBLISH == 'true' || needs.approve.outputs.publish_tag == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -436,7 +438,7 @@ jobs:
       - approve
       - build-extensions
       - release
-    if: vars.ENABLE_CHROME_PUBLISH == 'true'
+    if: vars.ENABLE_CHROME_PUBLISH == 'true' || needs.approve.outputs.publish_tag == 'true'
     permissions:
       contents: write
     steps:
@@ -460,7 +462,7 @@ jobs:
       - build
       - release
     runs-on: ubuntu-latest
-    if: vars.ENABLE_MCP_REGISTRY_PUBLISH == 'true'
+    if: vars.ENABLE_MCP_REGISTRY_PUBLISH == 'true' || needs.approve.outputs.publish_tag == 'true'
     permissions:
       id-token: write
       contents: read
@@ -515,7 +517,7 @@ jobs:
       - build
       - release
     runs-on: ubuntu-latest
-    if: vars.ENABLE_SMITHERY_PUBLISH == 'true'
+    if: vars.ENABLE_SMITHERY_PUBLISH == 'true' || needs.approve.outputs.publish_tag == 'true'
     permissions:
       contents: read
     steps:
