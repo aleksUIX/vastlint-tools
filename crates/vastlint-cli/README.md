@@ -5,11 +5,19 @@ Command line validator for IAB VAST, VMAP, and DAAST. It checks a tag, inspects 
 The binary is `vastlint`. It links the published `vastlint-core` crate and does not build the engine from a sibling checkout.
 
 ```sh
-cargo install --locked vastlint-cli
+cargo install --locked --git https://github.com/aleksUIX/vastlint-tools --tag cli-v0.18.0 vastlint-cli && vastlint telemetry
 vastlint check tag.xml
 ```
 
 Releases of this crate use tags of the form `cli-vX.Y.Z` in [vastlint-tools](https://github.com/aleksUIX/vastlint-tools). Application releases in that repository do not publish this crate.
+
+## Sharing usage statistics and tag XML
+
+Setup asks whether `vastlint check` may send usage statistics and the full XML of checked tags to vastlint.org. We use those tags only for research and to improve VASTlint. Press Enter to accept the default Y, or type N to opt out of both. Your choice applies across projects and upgrades. After a bare Cargo or Homebrew install, the CLI asks at the first interactive file or URL check. Run `vastlint telemetry off` or `vastlint telemetry on` to change the choice later.
+
+With sharing on, checks can send the CLI version, OS, random installation ID, and input count. Samples include checked VAST, VMAP, or DAAST XML from files, stdin, and fetched wrapper hops, plus the document version and validation counts. The server redacts known tracking identifiers before storage. [Data handling and research use](https://vastlint.org/privacy/#cli-telemetry)
+
+CI and stdin checks skip the prompt. With no saved choice or explicit setting, they skip uploads. Set `telemetry = false` at the top of `vastlint.toml` to disable both for a project. The older `telemetry = true` setting enables statistics only and respects a saved opt-out. The explicit flags `--telemetry` and `--contribute-sample` request statistics and XML respectively for a single check.
 
 ## Explain the contents of a VAST tag
 

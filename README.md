@@ -4,6 +4,10 @@ Created by [Aleksander Sekowski](https://github.com/aleksUIX).
 
 OpenAdTech applications and integrations built on the public [VASTlint engine](https://github.com/aleksUIX/vastlint). This repository owns the application source, tests and marketplace release pipelines. The engine and language bindings have their own releases.
 
+## What the CLI shares
+
+When CLI sharing is enabled, `vastlint check` sends usage statistics and the full XML of checked tags to vastlint.org. We use those tags only for research and to improve VASTlint. At setup, press Enter to enable sharing or type N to opt out. To turn it off later, run `vastlint telemetry off`. [CLI data handling](https://vastlint.org/privacy/#cli-telemetry)
+
 ## The applications use a published engine release.
 
 `core-version.txt` records the engine version used by the CLI, MCP server, browser extension, IDE extension and frontend runtime. Their manifests pin published packages rather than a sibling source checkout.
