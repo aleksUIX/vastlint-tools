@@ -1,3 +1,24 @@
+function fragmentHref(id) {
+  return typeof id === 'string' && /^[A-Za-z][\w:.-]*$/.test(id) ? '#' + id : '#';
+}
+
+function mediaSource(value) {
+  if (!value) return '';
+  if (value.startsWith('data:')) {
+    const sep = value.indexOf(',');
+    if (sep < 0) return '';
+    const header = value.slice(0, sep).toLowerCase();
+    if (!/^data:[\w/+.-]+;base64$/.test(header)) return '';
+    return value;
+  }
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
 function setupQAPlayer(assets, copyText) {
   const byId = id => document.getElementById('qa-' + id);
   const select = byId('asset');
@@ -9,7 +30,7 @@ function setupQAPlayer(assets, copyText) {
       option.textContent += ' · ' + asset.filename;
       option.id = 'preview-' + option.value;
       const link = document.createElement('a');
-      link.href = '#' + option.id;
+      link.href = fragmentHref(option.id);
       link.textContent = 'Open in QA player';
       document.getElementById(option.value).querySelector('.references').append(link);
     }
@@ -18,7 +39,7 @@ function setupQAPlayer(assets, copyText) {
     const target = document.getElementById('preview-' + link.hash.slice(1));
     if (!target) continue;
     const preview = document.createElement('a');
-    preview.href = '#' + target.id;
+    preview.href = fragmentHref(target.id);
     preview.textContent = 'Preview';
     link.parentElement.append(' · ', preview);
   }
@@ -89,7 +110,7 @@ function setupQAPlayer(assets, copyText) {
     measuredRatio = null;
     const {width,height,slot,duration} = option().dataset;
     const facts = [width && height && width + ' × ' + height, slot && 'Slot ' + slot, duration].filter(Boolean);
-    byId('declaration').href = '#' + select.value;
+    byId('declaration').href = fragmentHref(select.value);
     byId('declared').textContent = facts.join(' · ') || 'Dimensions and duration unspecified';
     byId('observed').textContent = 'Awaiting preview';
     byId('placeholder').textContent = 'Load the asset to preview it here.';
@@ -193,7 +214,7 @@ function setupQAPlayer(assets, copyText) {
         started = false;
       });
     }
-    current.src = source;
+    current.src = mediaSource(source);
   });
   byId('ratio').addEventListener('change',resize);
   byId('guides').addEventListener('change',e=>{byId('guide').hidden = !e.target.checked;});

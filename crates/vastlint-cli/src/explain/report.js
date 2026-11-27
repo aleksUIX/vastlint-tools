@@ -1,4 +1,21 @@
 (() => {
+  function mediaSource(value) {
+    if (!value) return '';
+    if (value.startsWith('data:')) {
+      const sep = value.indexOf(',');
+      if (sep < 0) return '';
+      const header = value.slice(0, sep).toLowerCase();
+      if (!/^data:[\w/+.-]+;base64$/.test(header)) return '';
+      return value;
+    }
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' ? url.href : '';
+    } catch {
+      return '';
+    }
+  }
+
   const navigation = document.querySelector('.views');
   const panels = Array.from(document.querySelectorAll('.panel'));
   const tabs = Array.from(navigation.querySelectorAll('a'));
@@ -19,12 +36,13 @@
     const embedded = card.hasAttribute('data-file') || card.hasAttribute('data-inline');
     const declared = entry.querySelector('.value')?.textContent.trim();
     if (!declared) continue;
-    let source = declared;
+    let source = mediaSource(declared);
     if (card.dataset.file) {
       const file = document.getElementById(card.dataset.file);
-      source = file.localName === 'image' ? file.getAttribute('href') :
-        'data:' + (card.dataset.mime || 'application/octet-stream') + ';base64,' + file.content.textContent;
+      source = file.localName === 'image' ? mediaSource(file.getAttribute('href')) :
+        mediaSource('data:' + (card.dataset.mime || 'application/octet-stream') + ';base64,' + file.content.textContent);
     }
+    if (!source) continue;
     assets.set(entry.id, {kind, source, embedded, filename: card.querySelector('strong').textContent});
     let frame;
     let media;
@@ -62,14 +80,14 @@
           if (video.duration > 0) video.currentTime = Math.min(0.05, video.duration / 2);
         });
         video.addEventListener('loadeddata', () => card.querySelector('.asset-thumb').replaceChildren(video));
-        video.src = source;
+        video.src = mediaSource(source);
         return;
       }
       const img = new Image();
       img.alt = '';
       img.referrerPolicy = 'no-referrer';
       img.onload = () => card.querySelector('.asset-thumb').replaceChildren(img);
-      img.src = source;
+      img.src = mediaSource(source);
     }
 
     function show() {
@@ -102,7 +120,7 @@
         frame.hidden = false;
         message.textContent = 'Could not display ' + filename + '. Check the URL, file availability and browser format support.';
       });
-      media.src = source;
+      media.src = mediaSource(source);
     }
 
     button.hidden = false;

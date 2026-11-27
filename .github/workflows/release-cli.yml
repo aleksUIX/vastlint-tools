@@ -147,7 +147,10 @@ jobs:
     name: Publish the CLI image
     needs: smoke-test
     runs-on: ubuntu-latest
-    if: vars.ENABLE_DOCKER_PUBLISH == 'true'
+    if: >-
+      vars.ENABLE_DOCKER_PUBLISH == 'true' &&
+      secrets.DOCKERHUB_USERNAME != '' &&
+      secrets.DOCKERHUB_TOKEN != ''
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
