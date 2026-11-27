@@ -115,6 +115,9 @@ enum Command {
         /// Write a new HTML file. The default is stdout.
         #[arg(short, long, visible_alias = "out", value_name = "HTML")]
         output: Option<std::path::PathBuf>,
+        /// Embed a local media file for a declared resource URL. Repeat for additional assets.
+        #[arg(long, num_args = 2, value_names = ["URL", "FILE"], action = clap::ArgAction::Append)]
+        embed_asset: Vec<String>,
     },
     /// List all known rule IDs with their default severity
     Rules,
@@ -236,7 +239,11 @@ fn main() -> ExitCode {
                 contribute_sample,
             )
         }
-        Command::Explain { file, output } => explain::run(&file, output.as_deref()),
+        Command::Explain {
+            file,
+            output,
+            embed_asset,
+        } => explain::run(&file, output.as_deref(), &embed_asset),
         Command::Rules => {
             run_rules();
             ExitCode::SUCCESS

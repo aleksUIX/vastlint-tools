@@ -1,3 +1,4 @@
+mod assets;
 mod guide;
 mod report;
 
@@ -11,8 +12,8 @@ use super::EXIT_USAGE_ERROR;
 // Matches the engine's supported document size. Bound stdin before allocating a report.
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
 
-pub(super) fn run(file: &str, output: Option<&Path>) -> ExitCode {
-    match generate(file, output) {
+pub(super) fn run(file: &str, output: Option<&Path>, embed: &[String]) -> ExitCode {
+    match generate(file, output, embed) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
             eprintln!("vastlint explain: {e}");
@@ -21,7 +22,7 @@ pub(super) fn run(file: &str, output: Option<&Path>) -> ExitCode {
     }
 }
 
-fn generate(file: &str, output: Option<&Path>) -> io::Result<()> {
+fn generate(file: &str, output: Option<&Path>, embed: &[String]) -> io::Result<()> {
     let reader: Box<dyn Read> = if file == "-" {
         Box::new(io::stdin().lock())
     } else {
@@ -43,7 +44,8 @@ fn generate(file: &str, output: Option<&Path>) -> io::Result<()> {
             .and_then(|s| s.to_str())
             .unwrap_or(file)
     };
-    let html = report::render(label, input);
+    let mut assets = assets::Embedded::new(embed)?;
+    let html = report::render(label, input, &mut assets)?;
     match output {
         None => io::stdout().lock().write_all(html.as_bytes()),
         Some(path) => {

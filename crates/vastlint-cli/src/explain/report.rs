@@ -4,7 +4,7 @@ use std::fmt::{self, Write};
 use roxmltree::{Document, Node, ParsingOptions};
 use vastlint_core::ValidationResult;
 
-use super::guide;
+use super::{assets::Embedded, guide};
 
 #[path = "reader.rs"]
 mod reader;
@@ -12,7 +12,7 @@ mod reader;
 type Element<'a> = Node<'a, 'a>;
 
 // XML is untrusted, including element values, namespace names and filenames.
-struct H<'a>(&'a str);
+pub(super) struct H<'a>(pub(super) &'a str);
 impl fmt::Display for H<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for part in self.0.split_inclusive(['&', '<', '>', '"', '\'']) {
@@ -143,9 +143,9 @@ impl<'a> Index<'a> {
     }
 }
 
-pub(super) fn render(label: &str, xml: &str) -> String {
+pub(super) fn render(label: &str, xml: &str, embeds: &mut Embedded) -> std::io::Result<String> {
     let result = vastlint_core::validate(xml);
-    let mut out = String::from("<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\">");
+    let mut out = String::from("<!doctype html><html lang=en><head><meta charset=utf-8><meta name=referrer content=no-referrer><meta name=viewport content='width=device-width,initial-scale=1'><meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; img-src https: data:; media-src https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\">");
     write!(out,"<title>{} | VASTlint</title><style>{}</style></head><body><header class=topbar><div class=topinner><a class=brand href='#elements'>VAST<span>lint</span></a><span class=slash>/</span><span>Explain</span><span class=slash>/</span><code class=filename>{}</code></div></header><main>",H(label),include_str!("report.css"),H(label)).unwrap();
     let parsed = Document::parse_with_options(
         xml,
@@ -204,7 +204,7 @@ pub(super) fn render(label: &str, xml: &str) -> String {
     if let Some(ix) = &index {
         out.push_str("<section id=elements class=panel aria-label='Annotated XML'><div class=tools hidden><label class=search><span aria-hidden=true>⌕</span><input id=query aria-label='Search elements, values and behavior' type=search placeholder='Find an element, value or behavior'></label><select id=scope aria-label='Filter by purpose'><option value=''>All elements</option><option>Delivery</option><option>Creative</option><option>Placement</option><option>Measurement</option><option>Interaction</option><option>Verification</option><option>Extension</option></select><output id=matches aria-live=polite></output></div><div class=sheet><div class=colheads><span>XML source</span><span>Player behavior</span></div><div id=entries>");
         for &n in &ix.nodes {
-            element(&mut out, n, ix, xml);
+            element(&mut out, n, ix, xml, embeds);
         }
         out.push_str("</div><p id=empty hidden>No matching elements. <button type=button id=clear>Clear filters</button></p></div></section><section id=delivery class=panel><h2>Ad behavior</h2>");
         if ads.is_empty() {
@@ -233,8 +233,10 @@ pub(super) fn render(label: &str, xml: &str) -> String {
             offset = end;
         }
     }
-    write!(out,"{}</code></pre></section></main><footer>Generated locally with VASTlint {}. The report includes the supplied XML.</footer><script>{}</script></body></html>",H(&xml[offset..]),env!("CARGO_PKG_VERSION"),include_str!("report.js")).unwrap();
-    out
+    write!(out, "{}</code></pre></section></main>", H(&xml[offset..])).unwrap();
+    embeds.write_payloads(&mut out)?;
+    write!(out,"<footer>Generated locally with VASTlint {}. The report includes the supplied XML.</footer><script>{}</script></body></html>",env!("CARGO_PKG_VERSION"),include_str!("report.js")).unwrap();
+    Ok(out)
 }
 
 fn quantity(n: usize, noun: &str) -> String {
@@ -685,7 +687,7 @@ fn findings(out: &mut String, result: &ValidationResult, index: Option<&Index<'_
     out.push_str("</section>");
 }
 
-fn element(out: &mut String, n: Element<'_>, ix: &Index<'_>, xml: &str) {
+fn element(out: &mut String, n: Element<'_>, ix: &Index<'_>, xml: &str, embeds: &mut Embedded) {
     let key = name(n);
     let number = id(n);
     let line = ix.line(n);
@@ -696,7 +698,17 @@ fn element(out: &mut String, n: Element<'_>, ix: &Index<'_>, xml: &str) {
     } else {
         generic
     };
-    reader::row(out, n, ix, xml, desc);
+    let preview = known
+        .then(|| {
+            super::assets::Preview::for_element(
+                key,
+                n.attribute("type").or(n.attribute("creativeType")),
+                n.attribute("apiFramework"),
+                val(n),
+            )
+        })
+        .flatten();
+    reader::row(out, n, ix, xml, desc, preview.as_ref(), embeds);
     write!(out,"<div class=inside><div class=detailhead><strong>{}</strong><span>{} · line {line}</span></div><p>{}</p>",H(qualified(n,xml)),reader::purpose(n,ix),H(desc)).unwrap();
     if known && key == "Tracking" {
         if let Some(ev) = n.attribute("event") {

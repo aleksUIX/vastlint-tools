@@ -1,4 +1,5 @@
 //! Static, source-ordered annotations. Each disclosure remains usable without JS.
+use super::super::assets::{Embedded, Preview};
 use super::{child, guide, id, name, qualified, quantity, val, Element, Index, H};
 use std::fmt::Write;
 
@@ -78,7 +79,15 @@ fn opening(out: &mut String, n: Element<'_>, xml: &str) {
     }
 }
 
-pub(super) fn row(out: &mut String, n: Element<'_>, ix: &Index<'_>, xml: &str, desc: &str) {
+pub(super) fn row(
+    out: &mut String,
+    n: Element<'_>,
+    ix: &Index<'_>,
+    xml: &str,
+    desc: &str,
+    preview: Option<&Preview<'_>>,
+    embeds: &mut Embedded,
+) {
     let depth = n
         .ancestors()
         .skip(1)
@@ -93,6 +102,9 @@ pub(super) fn row(out: &mut String, n: Element<'_>, ix: &Index<'_>, xml: &str, d
         annotation(out, n, desc);
     } else {
         out.push_str("Vendor-defined payload. Interpretation depends on the integration.");
+    }
+    if let Some(preview) = preview {
+        preview.card(out, embeds);
     }
     out.push_str("</span></summary>");
 }

@@ -20,6 +20,14 @@ cat tag.xml | vastlint explain - > report.html
 
 Open the HTML directly in a browser or IDE preview. The annotated view pairs each XML element with its meaning for the player. It shows one row per element in source order, including a source line number for minified and multiline tags. Expand a row to see attributes and follow its source link. On narrow screens, the explanation appears directly under the XML. Use the purpose filter or search to isolate tracking, placement, and creative resources. Ad behavior, validation findings, and the original XML have their own views. With scripting disabled all views and native row disclosures remain readable.
 
-The report includes the input XML, including URLs, tokens and vendor payloads supplied in the tag. It runs offline. Creative code, media files, tracking beacons and downstream wrappers are never loaded. Placement diagrams illustrate declared geometry. Vendor-specific elements retain their names, values and source locations.
+The report includes the input XML, including URLs, tokens and vendor payloads supplied in the tag. Opening the report runs offline. Image, video and audio declarations have a preview in their annotated XML row. **Load image**, **Load video** or **Load audio** requests that individual HTTPS media resource from the displayed host. The report leaves scripts, SIMID, frames, tracking beacons and wrapper URLs inert.
+
+For a portable report with a thumbnail and full-size preview, bind a declared URL to a local copy of the asset:
+
+```sh
+vastlint explain tag.xml -o report.html --embed-asset https://cdn.example.com/pause.jpg ./pause.jpg
+```
+
+Repeat the option for additional assets (64 MiB combined). Each URL must match a previewable declaration. The local payload is stored once per mapped URL, even when the tag references it twice. Inline base64 media can also be previewed. Preview controls require JavaScript. Placement diagrams illustrate declared geometry. Vendor-specific elements retain their names, values and source locations.
 
 Use one local UTF-8 XML file or stdin, up to 4 MiB. HTML goes to stdout unless you specify `--output` (`-o`). Exit 0 means the report was generated, including for malformed XML with diagnostics. I/O and usage errors exit 2. Use `vastlint check` to make validation errors fail a CI job.

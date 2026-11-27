@@ -104,3 +104,51 @@ fn annotated_rows_show_exact_source_tokens_and_decode_their_behavior() {
     );
     assert!(report.contains("id=scope"));
 }
+
+#[test]
+fn previews_only_declared_media_and_embeds_reused_files_once() {
+    let tmp = tempfile::tempdir().unwrap();
+    let xml = tmp.path().join("test.xml");
+    let bytes = tmp.path().join("poster.jpg");
+    let url = "https://cdn.example.test/a.jpg?k=1&v=2";
+    std::fs::write(&bytes, [0xff, 0xd8, 0xff, 0xd9]).unwrap();
+    let tag = format!(
+        r#"<VAST version="4.2"><Ad><InLine><Impression><![CDATA[{url}]]></Impression><Creatives><Creative><NonLinearAds><NonLinear><StaticResource creativeType="image/jpeg"><![CDATA[{url}]]></StaticResource><MediaFiles><MediaFile type="image/jpeg"><![CDATA[{url}]]></MediaFile><MediaFile type="video/mp4">https://media.example.test/video.mp4</MediaFile><InteractiveCreativeFile apiFramework="SIMID" type="text/html">https://media.example.test/ad.html</InteractiveCreativeFile></MediaFiles></NonLinear></NonLinearAds></Creative></Creatives><Extensions><Extension type="private"><MediaFile type="image/jpeg">https://example.test/hidden.jpg</MediaFile></Extension></Extensions></InLine></Ad></VAST>"#
+    );
+    std::fs::write(&xml, tag).unwrap();
+    let cmd = |url: &str| {
+        Command::new(env!("CARGO_BIN_EXE_vastlint"))
+            .arg("explain")
+            .arg(&xml)
+            .arg("--embed-asset")
+            .arg(url)
+            .arg(&bytes)
+            .output()
+            .unwrap()
+    };
+    let out = cmd(url);
+    assert!(out.status.success());
+    let html = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(html.matches("data-file='asset-0'").count(), 2);
+    assert_eq!(
+        html.matches("href='data:image/jpeg;base64,/9j/2Q=='")
+            .count(),
+        1
+    );
+    assert_eq!(html.matches("<span class=asset data-kind=").count(), 3);
+    assert!(html.contains("data-kind='video' data-mime='video/mp4' data-remote"));
+    assert!(!html.contains("src=\"https://media.example.test"));
+    assert_eq!(
+        cmd("https://media.example.test/ad.html").status.code(),
+        Some(2)
+    );
+}
+
+#[test]
+fn recognizes_inline_media_and_keeps_other_schemes_inert() {
+    let xml = r#"<VAST><Ad><InLine><Creatives><Creative><Linear><MediaFiles><MediaFile type="audio/wav">data:audio/wav;base64,UklGRg==</MediaFile><MediaFile type="image/png">javascript:alert(1)</MediaFile><MediaFile type="video/mp4" apiFramework="VPAID">https://example.test/code</MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>"#;
+    let html = String::from_utf8(explain(xml).stdout).unwrap();
+    assert!(html.contains("data-kind='audio' data-mime='audio/wav' data-inline"));
+    assert!(!html.contains(" data-remote>"));
+    assert_eq!(html.matches("class=asset-action type=button").count(), 1);
+}

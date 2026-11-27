@@ -17,6 +17,8 @@ name = "vastlint"
 path = "src/main.rs"
 
 [dependencies]
+base64 = "0.22"
+url = "2"
 vastlint-core = "=0.16.7"
 # High-throughput allocator. Removes system-allocator contention when
 # validating many large VAST documents concurrently.
