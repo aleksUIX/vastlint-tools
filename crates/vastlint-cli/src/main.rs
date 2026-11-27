@@ -34,6 +34,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Set up sharing of usage statistics and tag XML, or change the choice with on or off.
+    Telemetry {
+        #[arg(value_enum)]
+        setting: Option<telemetry::Setting>,
+    },
+
     /// Validate one or more VAST XML files or URLs (use - for stdin).
     /// Pass http(s):// URLs to fetch and validate live tags; wrapper chains are
     /// followed automatically up to --max-depth hops.
@@ -77,7 +83,7 @@ enum Command {
         no_config: bool,
 
         /// Send an anonymous usage ping (version, OS, install ID, file count).
-        /// Off by default. See README for what is sent.
+        /// Enable statistics for this check regardless of the saved preference.
         #[arg(long)]
         telemetry: bool,
 
@@ -101,10 +107,9 @@ enum Command {
         #[arg(long)]
         share: bool,
 
-        /// Opt in to sending this tag's XML to vastlint.org to help refine
-        /// its rules. Off by default, separate from --share and --telemetry.
-        /// Known tracking identifiers (device IDs, IPs, consent strings) are
-        /// redacted server-side before storage; samples are never public.
+        /// Send tag XML to vastlint.org for this check regardless of the saved choice.
+        /// We use these tags only for research and to improve VASTlint.
+        /// The server redacts known device IDs, IPs, and consent strings before storage.
         #[arg(long)]
         contribute_sample: bool,
     },
@@ -204,6 +209,13 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
 
     match cli.command {
+        Command::Telemetry { setting } => match telemetry::configure(setting) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("Could not configure telemetry: {e}");
+                ExitCode::from(EXIT_USAGE_ERROR)
+            }
+        },
         Command::Check {
             files,
             format,
@@ -283,8 +295,8 @@ fn main() -> ExitCode {
 /// Parsed configuration from a vastlint.toml file.
 struct Config {
     rule_overrides: Option<HashMap<&'static str, RuleLevel>>,
-    /// Whether the user has opted in to telemetry via the config file.
-    telemetry: bool,
+    /// False disables automatic sharing. True allows usage statistics.
+    telemetry: Option<bool>,
 }
 
 /// Load rule overrides from a config file.
@@ -330,7 +342,7 @@ fn find_config_file() -> Option<std::path::PathBuf> {
 ///
 /// Expected format:
 /// ```toml
-/// telemetry = true   # opt-in to anonymous usage ping
+/// telemetry = false  # disable automatic telemetry and tag submissions
 ///
 /// [rules]
 /// "VAST-2.0-mediafile-https" = "off"
@@ -340,9 +352,9 @@ fn parse_config(content: &str, source: &str) -> Result<Option<Config>, String> {
     let table: toml::Table = content.parse().map_err(|e| format!("{source}: {e}"))?;
 
     let telemetry_cfg = match table.get("telemetry") {
-        Some(toml::Value::Boolean(b)) => *b,
+        Some(toml::Value::Boolean(b)) => Some(*b),
         Some(_) => return Err(format!("{source}: telemetry must be a boolean")),
-        None => false,
+        None => None,
     };
 
     let rules_table = match table.get("rules") {
@@ -440,10 +452,12 @@ fn run_check(
         }
     };
 
-    let (rule_overrides, telemetry_enabled) = match cfg {
-        Some(c) => (c.rule_overrides, c.telemetry || telemetry_flag),
-        None => (None, telemetry_flag),
-    };
+    let project_telemetry = cfg.as_ref().and_then(|c| c.telemetry);
+    let rule_overrides = cfg.and_then(|c| c.rule_overrides);
+    let may_prompt = !files.iter().any(|file| file == "-");
+    let sharing = telemetry::Sharing::for_check(project_telemetry, may_prompt);
+    let reporter =
+        telemetry::Reporter::start(sharing, telemetry_flag, contribute_sample, files.len());
 
     let mut any_errors = false;
     let mut any_warnings = false;
@@ -462,7 +476,7 @@ fn run_check(
                 file,
                 max_depth,
                 rule_overrides.clone(),
-                contribute_sample,
+                reporter.as_ref(),
             );
             for (label, result) in &chain_results {
                 let has_errors = !result.summary.is_valid();
@@ -506,15 +520,8 @@ fn run_check(
                 ..Default::default()
             };
             let result = validate_with_context(&input, ctx);
-            if contribute_sample {
-                let version = result.version.best().map(|v| v.as_str().to_owned());
-                contribute::submit(
-                    input.clone(),
-                    version,
-                    result.summary.errors,
-                    result.summary.warnings,
-                    result.summary.infos,
-                );
+            if let Some(reporter) = &reporter {
+                reporter.sample(&input, &result);
             }
             let has_errors = !result.summary.is_valid();
             let has_warnings = result.summary.warnings > 0;
@@ -553,10 +560,8 @@ fn run_check(
         }
     }
 
-    if telemetry_enabled {
-        telemetry::ping(files.len());
-    } else {
-        telemetry::maybe_show_notice();
+    if let Some(reporter) = reporter {
+        reporter.finish();
     }
 
     if no_fail {
@@ -578,7 +583,7 @@ fn fetch_and_validate_chain(
     url: &str,
     max_depth: u8,
     rule_overrides: Option<std::collections::HashMap<&'static str, vastlint_core::RuleLevel>>,
-    contribute_sample: bool,
+    reporter: Option<&telemetry::Reporter>,
 ) -> Vec<(String, ValidationResult)> {
     let mut results = Vec::new();
     let mut current_url = url.to_owned();
@@ -618,15 +623,8 @@ fn fetch_and_validate_chain(
             forced_version: None,
         };
         let result = validate_with_context(&xml, ctx);
-        if contribute_sample {
-            let version = result.version.best().map(|v| v.as_str().to_owned());
-            contribute::submit(
-                xml.clone(),
-                version,
-                result.summary.errors,
-                result.summary.warnings,
-                result.summary.infos,
-            );
+        if let Some(reporter) = reporter {
+            reporter.sample(&xml, &result);
         }
         let next_url = extract_vast_ad_tag_uri(&xml);
         results.push((label, result));
@@ -1248,7 +1246,7 @@ fn run_init(out: Option<String>, force: bool) -> ExitCode {
          # Levels: \"error\", \"warning\", \"info\", \"off\".\n\
          # Docs: https://vastlint.org/docs/rules/\n\
          \n\
-         # telemetry = false   # opt in to an anonymous usage ping\n\
+         # telemetry = false   # disable automatic telemetry and tag submissions\n\
          \n\
          [rules]\n",
     );

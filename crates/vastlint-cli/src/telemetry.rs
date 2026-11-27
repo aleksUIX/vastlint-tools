@@ -1,98 +1,235 @@
-//! Opt-in anonymous usage telemetry.
-//!
-//! Nothing is sent unless the user explicitly enables it via `--telemetry`
-//! or `telemetry = true` in `vastlint.toml`.
-//!
-//! What is sent (one HTTP GET per `vastlint check` invocation):
-//!
-//! ```text
-//!   https://<endpoint>/?v=<version>&os=<os>&id=<install_id>&files=<n>
-//! ```
-//!
-//! - `v`     — vastlint version string (e.g. "0.1.0")
-//! - `os`    — operating system ("linux", "macos", "windows", "other")
-//! - `id`    — random 128-bit hex install ID, generated once and stored in
-//!   `~/.config/vastlint/id`. Never contains any personal data.
-//! - `files` — number of files passed to this invocation
-//!
-//! The ping fires in a background thread with a 2-second timeout and is
-//! silently dropped on any error (network down, endpoint unreachable, etc.).
-//! It does not block the CLI exit.
+//! Per-user CLI usage statistics and first-run setup.
 
-use std::path::PathBuf;
+use std::fs;
+use std::io::{self, BufRead, IsTerminal, Write};
+use std::path::{Path, PathBuf};
+use std::sync::mpsc::{self, Receiver, SyncSender};
+use std::time::Duration;
+use vastlint_core::{InputStatus, ValidationResult};
 
-/// Endpoint that receives the ping.
-/// Set to empty string to disable at compile time.
 const TELEMETRY_ENDPOINT: &str = "https://vastlint.org/api/ping";
+const DETAILS: &str = "https://vastlint.org/privacy/#cli-telemetry";
 
-/// Fire an async telemetry ping. Returns immediately; the request runs in a
-/// detached thread. Call only when the user has opted in.
-pub fn ping(file_count: usize) {
-    if TELEMETRY_ENDPOINT.is_empty() {
-        return;
-    }
-
-    let version = env!("CARGO_PKG_VERSION");
-    let os = os_name();
-    let id = install_id();
-    let endpoint = format!(
-        "{}?v={}&os={}&id={}&files={}",
-        TELEMETRY_ENDPOINT, version, os, id, file_count
-    );
-
-    // Detached thread — we do not join it. If the process exits before the
-    // request completes the OS cleans up. The 2-second timeout ensures the
-    // thread doesn't live long regardless.
-    std::thread::spawn(move || {
-        let _ = ureq::get(&endpoint)
-            .timeout(std::time::Duration::from_secs(2))
-            .call();
-    });
+#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
+pub enum Setting {
+    On,
+    Off,
 }
 
-/// Print a one-time notice about telemetry on the user's first run.
-/// Creates a sentinel file at `~/.config/vastlint/notice-shown` so the
-/// message is never displayed again. Silently does nothing if the config
-/// directory is unwritable or if we're not connected to a TTY (CI, pipes).
-pub fn maybe_show_notice() {
-    // Skip in non-interactive contexts — don't pollute CI logs.
-    if !std::io::IsTerminal::is_terminal(&std::io::stderr()) {
-        return;
+impl Setting {
+    fn label(self) -> &'static str {
+        match self {
+            Self::On => "on",
+            Self::Off => "off",
+        }
     }
+}
 
-    let Some(sentinel) = notice_path() else {
-        return;
+fn config_dir() -> io::Result<PathBuf> {
+    let env_path = |name| {
+        std::env::var_os(name)
+            .filter(|p| !p.is_empty())
+            .map(PathBuf::from)
     };
-
-    if sentinel.exists() {
-        return;
-    }
-
-    eprintln!(
-        "\n\x1b[1mtip:\x1b[0m help improve vastlint with anonymous usage stats:\n\
-         \n\
-         \x20   vastlint check --telemetry FILE.xml\n\
-         \x20   # or set  telemetry = true  in vastlint.toml\n\
-         \n\
-         \x20 Only version, OS, and file count are sent. No file contents.\n\
-         \x20 Details: https://vastlint.org/telemetry\n"
-    );
-
-    // Create the sentinel so we never show this again.
-    if let Some(parent) = sentinel.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    let _ = std::fs::write(&sentinel, "1");
+    env_path("XDG_CONFIG_HOME")
+        .or_else(|| env_path("HOME").map(|p| p.join(".config")))
+        .or_else(|| env_path("APPDATA"))
+        .map(|p| p.join("vastlint"))
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no user configuration directory"))
 }
 
-fn notice_path() -> Option<PathBuf> {
-    let config_dir = std::env::var_os("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .or_else(|| dirs_next().map(|h| h.join(".config")))?;
-    Some(config_dir.join("vastlint").join("notice-shown"))
+fn read_setting(path: &Path) -> io::Result<Option<Setting>> {
+    match fs::read_to_string(path) {
+        Ok(value) => match value.trim() {
+            "on" => Ok(Some(Setting::On)),
+            "off" => Ok(Some(Setting::Off)),
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "invalid telemetry setting",
+            )),
+        },
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(e),
+    }
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────────
+fn save_setting(dir: &Path, setting: Setting, replace: bool) -> io::Result<Setting> {
+    fs::create_dir_all(dir)?;
+    let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
+    writeln!(tmp, "{}", setting.label())?;
+    let path = dir.join("telemetry");
+    if replace {
+        tmp.persist(path)?;
+    } else if let Err(e) = tmp.persist_noclobber(&path) {
+        if e.error.kind() != io::ErrorKind::AlreadyExists {
+            return Err(e.error);
+        }
+        return read_setting(&path)?.ok_or_else(|| io::Error::from(io::ErrorKind::NotFound));
+    }
+    Ok(setting)
+}
+
+fn prompt(mut input: impl BufRead, mut output: impl Write) -> io::Result<Option<Setting>> {
+    writeln!(output, "vastlint check can send full tag XML (including fetched wrappers), validation counts, CLI version, operating system, random installation ID, and input count to vastlint.org.")?;
+    writeln!(
+        output,
+        "We use these tags only for research and to improve VASTlint. The server redacts known tracking identifiers before storage."
+    )?;
+    writeln!(output, "Details: {DETAILS}")?;
+    loop {
+        write!(
+            output,
+            "Send usage statistics and tag XML to vastlint.org? [Y/n] "
+        )?;
+        output.flush()?;
+        let mut answer = String::new();
+        if input.read_line(&mut answer)? == 0 {
+            return Ok(None);
+        }
+        match answer.trim().to_ascii_lowercase().as_str() {
+            "" | "y" | "yes" => return Ok(Some(Setting::On)),
+            "n" | "no" => return Ok(Some(Setting::Off)),
+            _ => writeln!(output, "Press Enter for yes or type N for no.")?,
+        }
+    }
+}
+
+fn setup_if_needed(dir: &Path, interactive: bool) -> io::Result<Option<Setting>> {
+    let saved = read_setting(&dir.join("telemetry"))?;
+    if saved.is_some()
+        || !interactive
+        || std::env::var_os("CI").is_some()
+        || !io::stdin().is_terminal()
+        || !io::stderr().is_terminal()
+    {
+        return Ok(saved);
+    }
+    if let Some(setting) = prompt(io::stdin().lock(), io::stderr().lock())? {
+        // An outstanding default-yes prompt must respect a concurrent opt-out.
+        let setting = save_setting(dir, setting, setting == Setting::Off)?;
+        eprintln!(
+            "Sharing usage statistics and tag XML is {}. Change this with vastlint telemetry on or off.",
+            setting.label()
+        );
+        return Ok(Some(setting));
+    }
+    Ok(None)
+}
+
+pub fn configure(setting: Option<Setting>) -> io::Result<()> {
+    let dir = config_dir()?;
+    if let Some(setting) = setting {
+        save_setting(&dir, setting, true)?;
+        eprintln!(
+            "Sharing usage statistics and tag XML is {}.",
+            setting.label()
+        );
+    } else if setup_if_needed(&dir, true)?.is_none() {
+        eprintln!(
+            "Telemetry setup is pending. Run vastlint telemetry on or off to choose. {DETAILS}"
+        );
+    }
+    Ok(())
+}
+
+#[derive(Default)]
+pub struct Sharing {
+    statistics: bool,
+    samples: bool,
+}
+
+impl Sharing {
+    fn resolve(saved: Option<Setting>, project: Option<bool>) -> Self {
+        let samples = saved == Some(Setting::On) && project != Some(false);
+        // Existing project settings only authorized usage statistics.
+        let statistics = samples || (saved.is_none() && project == Some(true));
+        Self {
+            statistics,
+            samples,
+        }
+    }
+
+    pub fn for_check(project: Option<bool>, may_prompt: bool) -> Self {
+        if project == Some(false) {
+            return Self::default();
+        }
+        match config_dir().and_then(|dir| setup_if_needed(&dir, may_prompt)) {
+            Ok(saved) => Self::resolve(saved, project),
+            Err(e) => {
+                eprintln!(
+                    "Could not read or save telemetry settings: {e}. Skipping automatic sharing."
+                );
+                Self::default()
+            }
+        }
+    }
+}
+
+/// One worker per check keeps network requests off the validation path.
+/// Sample buffering and the wait at exit are bounded even for large batches.
+pub struct Reporter {
+    samples: Option<SyncSender<String>>,
+    done: Receiver<()>,
+    explicit_sample: bool,
+}
+
+impl Reporter {
+    pub fn start(
+        sharing: Sharing,
+        stats_flag: bool,
+        sample_flag: bool,
+        files: usize,
+    ) -> Option<Self> {
+        let statistics = sharing.statistics || stats_flag;
+        let samples = sharing.samples || sample_flag;
+        if !statistics && !samples {
+            return None;
+        }
+        let (sender, queue) = mpsc::sync_channel::<String>(8);
+        let (finished, done) = mpsc::channel();
+        std::thread::Builder::new()
+            .name("vastlint-telemetry".into())
+            .spawn(move || {
+                if statistics {
+                    let url = format!(
+                        "{}?v={}&os={}&id={}&files={}",
+                        TELEMETRY_ENDPOINT,
+                        env!("CARGO_PKG_VERSION"),
+                        os_name(),
+                        install_id(),
+                        files
+                    );
+                    let _ = ureq::get(&url).timeout(Duration::from_secs(2)).call();
+                }
+                for body in queue {
+                    crate::contribute::submit(&body);
+                }
+                let _ = finished.send(());
+            })
+            .ok()?;
+        Some(Self {
+            samples: samples.then_some(sender),
+            done,
+            explicit_sample: sample_flag,
+        })
+    }
+
+    pub fn sample(&self, xml: &str, result: &ValidationResult) {
+        if let Some(sender) = &self.samples {
+            if !self.explicit_sample && result.input_status != InputStatus::Supported {
+                return;
+            }
+            if let Some(body) = crate::contribute::body(xml, result) {
+                let _ = sender.try_send(body);
+            }
+        }
+    }
+
+    pub fn finish(self) {
+        drop(self.samples);
+        let _ = self.done.recv_timeout(Duration::from_secs(2));
+    }
+}
 
 fn os_name() -> &'static str {
     if cfg!(target_os = "linux") {
@@ -110,7 +247,8 @@ fn os_name() -> &'static str {
 /// Stored at `~/.config/vastlint/id` as a 32-char hex string.
 /// Falls back to a random ID that is not persisted if the directory is not writable.
 fn install_id() -> String {
-    if let Some(path) = id_path() {
+    if let Ok(dir) = config_dir() {
+        let path = dir.join("id");
         if let Ok(existing) = std::fs::read_to_string(&path) {
             let trimmed = existing.trim().to_owned();
             if trimmed.len() == 32 && trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -126,19 +264,6 @@ fn install_id() -> String {
         return id;
     }
     random_hex_id()
-}
-
-fn id_path() -> Option<PathBuf> {
-    // Respect XDG_CONFIG_HOME if set, otherwise use ~/.config
-    let config_dir = std::env::var_os("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .or_else(|| dirs_next().map(|h| h.join(".config")))?;
-    Some(config_dir.join("vastlint").join("id"))
-}
-
-/// Minimal home-dir lookup without an extra dependency.
-fn dirs_next() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from)
 }
 
 /// Generate a random 32-char hex string using system entropy via `/dev/urandom`
@@ -171,4 +296,70 @@ fn os_random_bytes() -> [u8; 16] {
     let pid = std::process::id() as u128;
     let mixed = ts ^ (pid << 32) ^ (pid >> 32);
     mixed.to_le_bytes()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prompt_discloses_both_uploads_and_handles_default_refusal_and_eof() {
+        for (input, expected) in [
+            ("\n", Some(Setting::On)),
+            ("Yes\n", Some(Setting::On)),
+            ("invalid\nN\n", Some(Setting::Off)),
+            ("no\n", Some(Setting::Off)),
+            ("", None),
+        ] {
+            let mut output = Vec::new();
+            assert_eq!(prompt(input.as_bytes(), &mut output).unwrap(), expected);
+            let output = String::from_utf8(output).unwrap();
+            assert!(output.contains("usage statistics and tag XML"));
+            assert!(output.contains("only for research and to improve VASTlint"));
+            assert!(output.contains("[Y/n]"));
+            assert!(output.contains(DETAILS));
+        }
+    }
+
+    #[test]
+    fn concurrent_setup_cannot_overwrite_an_opt_out_with_default_yes() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = dir.path();
+        save_setting(dir, Setting::Off, true).unwrap();
+        assert_eq!(save_setting(dir, Setting::On, false).unwrap(), Setting::Off);
+        assert_eq!(setup_if_needed(dir, false).unwrap(), Some(Setting::Off));
+        save_setting(dir, Setting::On, true).unwrap();
+        assert_eq!(setup_if_needed(dir, false).unwrap(), Some(Setting::On));
+    }
+
+    #[test]
+    fn project_settings_preserve_existing_choices() {
+        for (saved, project, stats, xml) in [
+            (None, None, false, false),
+            (None, Some(true), true, false),
+            (Some(Setting::Off), Some(true), false, false),
+            (Some(Setting::On), Some(false), false, false),
+            (Some(Setting::On), None, true, true),
+        ] {
+            let sharing = Sharing::resolve(saved, project);
+            assert_eq!((sharing.statistics, sharing.samples), (stats, xml));
+        }
+    }
+
+    #[test]
+    fn automatic_samples_only_enqueue_supported_tags_with_validation_counts() {
+        let (sender, queue) = mpsc::sync_channel(2);
+        let reporter = Reporter {
+            samples: Some(sender),
+            done: mpsc::channel().1,
+            explicit_sample: false,
+        };
+        for xml in ["plain text", "<other/>", "<VAST/>"] {
+            reporter.sample(xml, &vastlint_core::validate(xml));
+        }
+        let body = queue.try_recv().unwrap();
+        assert!(body.contains(r#""xml":"<VAST/>""#));
+        assert!(body.contains(r#""summary":{"errors":"#));
+        assert!(queue.try_recv().is_err());
+    }
 }

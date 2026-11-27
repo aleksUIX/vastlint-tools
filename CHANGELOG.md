@@ -1,5 +1,10 @@
 # Changelog
 
+## CLI 0.18.0 (2026-11-26)
+
+- Setup asks whether to send usage statistics and full tag XML. Press Enter to enable both or type N to opt out. Tags are used only for research and to improve VASTlint. [CLI data handling](https://vastlint.org/privacy/#cli-telemetry)
+- Change the saved choice with `vastlint telemetry off` or `vastlint telemetry on`. Existing usage-only settings continue to cover statistics only.
+
 ## CLI 0.17.0 (2026-11-26)
 
 - Run `vastlint explain tag.xml -o report.html` to generate a standalone report with annotated XML, source-linked findings, a partner handoff, and a trafficking review for each ad.

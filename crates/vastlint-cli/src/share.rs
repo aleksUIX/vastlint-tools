@@ -3,8 +3,7 @@
 //! short public URL, e.g. `https://vastlint.org/r/ab12cd34`.
 //!
 //! The report never includes the input XML itself, only the validation
-//! result. Upload is a plain blocking POST (unlike telemetry, which is
-//! fire-and-forget) because the CLI needs the URL back before it prints it.
+//! result. Upload is a blocking POST because the CLI needs the URL back before it prints it.
 
 use vastlint_core::ValidationResult;
 
