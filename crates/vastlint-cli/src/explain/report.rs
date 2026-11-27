@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Write};
 
 use roxmltree::{Document, Node, ParsingOptions};
-use vastlint_core::ValidationResult;
+use vastlint_core::{Issue, ValidationResult};
 
 use super::{assets::Embedded, guide};
 
@@ -138,6 +138,15 @@ impl<'a> Index<'a> {
         self.lines
             .partition_point(|&offset| offset <= n.range().start)
     }
+    fn finding_node(&self, finding: &Issue) -> Option<Element<'a>> {
+        let start = self.lines.get(finding.line?.checked_sub(1)? as usize)?;
+        let offset = start + finding.col?.checked_sub(1)? as usize;
+        let index = self
+            .nodes
+            .binary_search_by_key(&offset, |n| n.range().start)
+            .ok()?;
+        Some(self.nodes[index])
+    }
     fn recognized(&self, n: Element<'_>) -> bool {
         self.known.contains(&id(n))
     }
@@ -193,7 +202,7 @@ pub(super) fn render(label: &str, xml: &str, embeds: &mut Embedded) -> std::io::
     )
     .unwrap();
     if let Some(ix) = &index {
-        write!(out,"<a href='#elements'>Annotated XML <small>{}</small></a><a href='#delivery'>Ad behavior <small>{}</small></a>",ix.nodes.len(),ads.len()).unwrap();
+        write!(out,"<a href='#elements'>Annotated XML <small>{}</small></a><a href='#delivery'>Partner handoff</a><a href='#trafficking'>Trafficking</a>",ix.nodes.len()).unwrap();
     }
     write!(
         out,
@@ -202,18 +211,39 @@ pub(super) fn render(label: &str, xml: &str, embeds: &mut Embedded) -> std::io::
     )
     .unwrap();
     if let Some(ix) = &index {
-        out.push_str("<section id=elements class=panel aria-label='Annotated XML'><div class=tools hidden><label class=search><span aria-hidden=true>⌕</span><input id=query aria-label='Search elements, values and behavior' type=search placeholder='Find an element, value or behavior'></label><select id=scope aria-label='Filter by purpose'><option value=''>All elements</option><option>Delivery</option><option>Creative</option><option>Placement</option><option>Measurement</option><option>Interaction</option><option>Verification</option><option>Extension</option></select><output id=matches aria-live=polite></output></div><div class=sheet><div class=colheads><span>XML source</span><span>Player behavior</span></div><div id=entries>");
+        out.push_str("<section id=elements class=panel aria-label='Annotated XML'><div class=tools hidden><label class=search><span aria-hidden=true>⌕</span><input id=query aria-label='Search elements, values and behavior' type=search placeholder='Find an element, value or behavior'></label><select id=scope aria-label='Filter by purpose'><option value=''>All elements</option><option value='findings'>With findings</option><option>Delivery</option><option>Creative</option><option>Placement</option><option>Measurement</option><option>Interaction</option><option>Verification</option><option>Extension</option></select><output id=matches aria-live=polite></output></div><div class=sheet><div class=colheads><span>XML source</span><span>Player behavior</span></div><div id=entries>");
+        let mut located = HashMap::<usize, Vec<(usize, &Issue)>>::new();
+        for (i, issue) in result.issues.iter().enumerate() {
+            if let Some(node) = ix.finding_node(issue) {
+                located.entry(id(node)).or_default().push((i, issue));
+            }
+        }
         for &n in &ix.nodes {
-            element(&mut out, n, ix, xml, embeds);
+            element(
+                &mut out,
+                n,
+                ix,
+                xml,
+                embeds,
+                located.get(&id(n)).map(Vec::as_slice).unwrap_or_default(),
+            );
         }
-        out.push_str("</div><p id=empty hidden>No matching elements. <button type=button id=clear>Clear filters</button></p></div></section><section id=delivery class=panel><h2>Ad behavior</h2>");
-        if ads.is_empty() {
-            out.push_str("<p>No top-level VAST ad is declared.</p>");
+        out.push_str("</div><p id=empty hidden>No matching elements. <button type=button id=clear>Clear filters</button></p></div></section>");
+        for view in [AdView::Partner, AdView::Trafficking] {
+            out.push_str(match view {
+                AdView::Partner => "<section id=delivery class=panel><h2>Partner handoff</h2>",
+                AdView::Trafficking => {
+                    "<section id=trafficking class=panel><h2>Trafficking review</h2>"
+                }
+            });
+            if ads.is_empty() {
+                out.push_str("<p>No top-level VAST ad is declared.</p>");
+            }
+            for (i, &ad) in ads.iter().enumerate() {
+                ad_card(&mut out, ad, i + 1, ix, view);
+            }
+            out.push_str("</section>");
         }
-        for (i, &ad) in ads.iter().enumerate() {
-            ad_card(&mut out, ad, i + 1, ix);
-        }
-        out.push_str("</section>");
     }
     findings(&mut out, &result, index.as_ref());
     out.push_str("<section id=source class=panel><h2>Raw XML</h2><pre tabindex=0><code>");
@@ -258,7 +288,13 @@ const ASSETS: &[&str] = &[
     "ExecutableResource",
     "QrCodeImageUrl",
 ];
-fn ad_card(out: &mut String, ad: Element<'_>, number: usize, ix: &Index<'_>) {
+#[derive(Clone, Copy)]
+enum AdView {
+    Partner,
+    Trafficking,
+}
+
+fn ad_card(out: &mut String, ad: Element<'_>, number: usize, ix: &Index<'_>, view: AdView) {
     let title = child(ad, "InLine")
         .or_else(|| child(ad, "Wrapper"))
         .and_then(|b| child(b, "AdTitle"))
@@ -268,12 +304,15 @@ fn ad_card(out: &mut String, ad: Element<'_>, number: usize, ix: &Index<'_>) {
         .unwrap_or("Untitled ad");
     write!(
         out,
-        "<article class=ad><div class=adhead><div><h3>{}</h3><small>Ad {number}</small></div>",
+        "<article class=ad data-ad={number}><div class=brief><div class=adhead><div><h3>{}</h3><small>Ad {number}</small></div>",
         H(title)
     )
     .unwrap();
     link(out, ad, "Inspect ad");
     out.push_str("</div>");
+    if let Some(key) = ad.attribute("id").filter(|k| *k != title) {
+        write!(out, "<p>Ad ID <code>{}</code></p>", H(key)).unwrap();
+    }
     if let Some(seq) = ad.attribute("sequence") {
         write!(out, "<p>Pod sequence <b>{}</b></p>", H(seq)).unwrap();
     }
@@ -292,14 +331,84 @@ fn ad_card(out: &mut String, ad: Element<'_>, number: usize, ix: &Index<'_>) {
             .descendants()
             .filter(|n| n.is_element() && ix.recognized(*n))
             .collect();
-        describe_delivery(out, &members, wrapper);
-        placement(out, &members);
-        creatives(out, body, ix);
-        resources(out, &members);
-        destinations(out, &members);
-        measurement(out, &members);
+        match view {
+            AdView::Partner => {
+                describe_delivery(out, &members, wrapper);
+                if let Some(image) = reader::shared_pause_image(body, ix) {
+                    out.push_str("<p>The portfolio extension and native fallback both reference ");
+                    link(out, image, "the same image file");
+                    out.push_str(".</p>");
+                }
+                placement(out, &members);
+                partner_questions(out, &members);
+            }
+            AdView::Trafficking => {
+                for &signal in members
+                    .iter()
+                    .filter(|n| matches!(name(**n), "plcmt" | "pos"))
+                {
+                    let field = if name(signal) == "plcmt" {
+                        "Placement"
+                    } else {
+                        "Position"
+                    };
+                    let meaning =
+                        guide::signal(name(signal), val(signal)).unwrap_or("Unmapped value");
+                    out.push_str("<p>");
+                    link(
+                        out,
+                        signal,
+                        &format!("{field} · {meaning} ({})", val(signal)),
+                    );
+                    out.push_str("</p>");
+                }
+                creatives(out, body, ix);
+                resources(out, &members);
+                if !destinations(out, &members) {
+                    out.push_str("<h4>Viewer destinations</h4><p>No click-through or QR destination is declared in this response.</p>");
+                }
+                let impressions = members.iter().filter(|n| name(**n) == "Impression").count();
+                write!(
+                    out,
+                    "<h4>Measurement</h4><p>{} in this response.</p>",
+                    quantity(impressions, "impression declaration")
+                )
+                .unwrap();
+                measurement(out, &members);
+            }
+        }
+    }
+    out.push_str("</div>");
+    if matches!(view, AdView::Partner) {
+        out.push_str("<button class=copy-handoff type=button hidden>Copy handoff</button><span class=copy-status role=status></span>");
     }
     out.push_str("</article>");
+}
+
+fn partner_questions(out: &mut String, members: &[Element<'_>]) {
+    let mut questions = Vec::new();
+    for &n in members {
+        let question = match name(n) {
+            "VASTAdTagURI" | "VASTAdTagURL" => "Can you share the downstream response used for this placement so we can check the final creative?",
+            "Extension" if n.attribute("type") == Some("ctv_ad_portfolio") => "Does creative review accept the CTV portfolio extension, and which declaration does the player use?",
+            "plcmt" | "pos" => "Do these placement values match the booking or bid request, and does your integration read them from VAST?",
+            "InteractiveCreativeFile" if n.attribute("apiFramework").is_some_and(|v| v.eq_ignore_ascii_case("SIMID")) => "Which target players support this SIMID creative, and what do viewers see if initialization fails?",
+            "Companion" => "Which companion sizes can the publisher display alongside the main creative?",
+            _ => continue,
+        };
+        if !questions.iter().any(|(_, q)| *q == question) {
+            questions.push((n, question));
+        }
+    }
+    if !questions.is_empty() {
+        out.push_str("<h4>Confirm with the partner</h4><ul class=questions>");
+        for (n, question) in questions {
+            out.push_str("<li>");
+            link(out, n, question);
+            out.push_str("</li>");
+        }
+        out.push_str("</ul>");
+    }
 }
 
 fn describe_delivery(out: &mut String, members: &[Element<'_>], wrapper: bool) {
@@ -484,6 +593,17 @@ fn creatives(out: &mut String, body: Element<'_>, ix: &Index<'_>) {
                 if let Some(duration) = child(shape, "Duration") {
                     link(out, duration, &format!("Duration {}", val(duration)));
                 }
+                for unit in shape
+                    .children()
+                    .filter(|n| n.is_element() && name(*n) == "NonLinear" && ix.recognized(*n))
+                {
+                    if let Some(duration) = child(unit, "Duration") {
+                        link(out, duration, &format!("Duration {}", val(duration)));
+                    }
+                    if let Some(min) = unit.attribute("minSuggestedDuration") {
+                        link(out, unit, &format!("Suggested minimum {min}"));
+                    }
+                }
                 if let Some(skip) = shape.attribute("skipoffset") {
                     link(out, shape, &format!("Skip at {skip}"));
                 }
@@ -531,7 +651,18 @@ fn resources(out: &mut String, members: &[Element<'_>]) {
         .filter(|n| ASSETS.contains(&name(*n)))
         .collect();
     if !assets.is_empty() {
-        out.push_str("<h4>Declared resources</h4><ul class=resources>");
+        let references: Vec<_> = assets
+            .iter()
+            .copied()
+            .filter(|n| name(*n) != "HTMLResource" && !val(*n).is_empty())
+            .map(val)
+            .collect();
+        let distinct = references.iter().copied().collect::<HashSet<_>>().len();
+        out.push_str("<h4>Declared resources</h4>");
+        if !references.is_empty() {
+            write!(out, "<p class=resource-count>{} across {}. Counts use the exact references in this tag.</p>", quantity(distinct, "distinct file reference"), quantity(references.len(), "declaration")).unwrap();
+        }
+        out.push_str("<ul class=resources>");
         for n in assets {
             out.push_str("<li><div>");
             link(out, n, name(n));
@@ -560,8 +691,18 @@ fn resources(out: &mut String, members: &[Element<'_>]) {
                     write!(out, " <small>{}</small>", H(v)).unwrap();
                 }
             }
-            if let (Some(w), Some(h)) = (n.attribute("width"), n.attribute("height")) {
-                write!(out, " <small>{} × {}</small>", H(w), H(h)).unwrap();
+            let dimensions = |node: Element<'_>| {
+                node.attribute("width")
+                    .zip(node.attribute("height"))
+                    .map(|(w, h)| format!("{w} × {h}"))
+            };
+            if let Some(size) = dimensions(n) {
+                write!(out, " <small>{}</small>", H(&size)).unwrap();
+            } else if let Some(size) = context
+                .filter(|p| matches!(name(*p), "Companion" | "NonLinear" | "Icon"))
+                .and_then(dimensions)
+            {
+                write!(out, " <small>Slot {}</small>", H(&size)).unwrap();
             }
             out.push_str("</div><code>");
             if name(n) == "HTMLResource" {
@@ -574,7 +715,7 @@ fn resources(out: &mut String, members: &[Element<'_>]) {
         out.push_str("</ul>");
     }
 }
-fn destinations(out: &mut String, members: &[Element<'_>]) {
+fn destinations(out: &mut String, members: &[Element<'_>]) -> bool {
     let mut links = members
         .iter()
         .copied()
@@ -590,7 +731,7 @@ fn destinations(out: &mut String, members: &[Element<'_>]) {
         })
         .peekable();
     if links.peek().is_none() {
-        return;
+        return false;
     }
     out.push_str("<h4>Viewer destinations</h4><ul class=resources>");
     for n in links {
@@ -606,6 +747,7 @@ fn destinations(out: &mut String, members: &[Element<'_>]) {
         write!(out, "<code>{}</code></li>", H(val(n))).unwrap();
     }
     out.push_str("</ul>");
+    true
 }
 fn measurement(out: &mut String, members: &[Element<'_>]) {
     let beacons: Vec<_> = members
@@ -629,7 +771,7 @@ fn measurement(out: &mut String, members: &[Element<'_>]) {
         })
         .collect();
     if !beacons.is_empty() {
-        out.push_str("<h4>Measurement events</h4><div class=chips>");
+        out.push_str("<div class=chips>");
         for n in beacons {
             let event = n.attribute("event").unwrap_or(name(n));
             link(out, n, event);
@@ -651,10 +793,10 @@ fn findings(out: &mut String, result: &ValidationResult, index: Option<&Index<'_
     if result.issues.is_empty() {
         out.push_str("<p class=success>VASTlint reported no findings for this document.</p>");
     }
-    for finding in &result.issues {
+    for (i, finding) in result.issues.iter().enumerate() {
         write!(
             out,
-            "<div class=finding><strong>{}</strong> <code>{}</code><p>{}</p>",
+            "<div class=finding id=f{i}><strong>{}</strong> <code>{}</code><p>{}</p>",
             H(finding.severity.as_str()),
             H(finding.id),
             H(finding.message)
@@ -665,18 +807,7 @@ fn findings(out: &mut String, result: &ValidationResult, index: Option<&Index<'_
         }
         if let (Some(line), Some(ix)) = (finding.line, index) {
             let label = format!("Line {line}");
-            let at = ix
-                .lines
-                .get(line.saturating_sub(1) as usize)
-                .map(|s| s + finding.col.unwrap_or(1).saturating_sub(1) as usize);
-            if let Some(node) = at
-                .and_then(|offset| {
-                    ix.nodes
-                        .binary_search_by_key(&offset, |n| n.range().start)
-                        .ok()
-                })
-                .map(|i| ix.nodes[i])
-            {
+            if let Some(node) = ix.finding_node(finding) {
                 link(out, node, &label);
             } else {
                 write!(out, "{}", H(&label)).unwrap();
@@ -687,7 +818,14 @@ fn findings(out: &mut String, result: &ValidationResult, index: Option<&Index<'_
     out.push_str("</section>");
 }
 
-fn element(out: &mut String, n: Element<'_>, ix: &Index<'_>, xml: &str, embeds: &mut Embedded) {
+fn element(
+    out: &mut String,
+    n: Element<'_>,
+    ix: &Index<'_>,
+    xml: &str,
+    embeds: &mut Embedded,
+    issues: &[(usize, &Issue)],
+) {
     let key = name(n);
     let number = id(n);
     let line = ix.line(n);
@@ -709,7 +847,26 @@ fn element(out: &mut String, n: Element<'_>, ix: &Index<'_>, xml: &str, embeds: 
         })
         .flatten();
     reader::row(out, n, ix, xml, desc, preview.as_ref(), embeds);
+    if !issues.is_empty() {
+        write!(
+            out,
+            " <span class=issue-count>{}</span>",
+            quantity(issues.len(), "finding")
+        )
+        .unwrap();
+    }
+    out.push_str("</span></summary>");
     write!(out,"<div class=inside><div class=detailhead><strong>{}</strong><span>{} · line {line}</span></div><p>{}</p>",H(qualified(n,xml)),reader::purpose(n,ix),H(desc)).unwrap();
+    for (i, issue) in issues {
+        write!(
+            out,
+            "<p class=row-finding><a href='#f{i}'>{} · {}</a> {}</p>",
+            H(issue.severity.as_str()),
+            H(issue.id),
+            H(issue.message)
+        )
+        .unwrap();
+    }
     if known && key == "Tracking" {
         if let Some(ev) = n.attribute("event") {
             write!(out, "<p><b>{}</b> · {}</p>", H(ev), guide::event(ev)).unwrap();

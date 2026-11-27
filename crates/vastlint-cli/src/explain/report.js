@@ -116,11 +116,31 @@
     entry.addEventListener('previewhide', stop);
   }
 
+  for (const button of document.querySelectorAll('.copy-handoff')) {
+    button.hidden = false;
+    button.addEventListener('click', async () => {
+      const brief = button.closest('.ad').querySelector('.brief');
+      const status = button.nextElementSibling;
+      try {
+        await navigator.clipboard.writeText(brief.innerText);
+        status.textContent = 'Handoff copied';
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(brief);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        status.textContent = 'Handoff selected. Use your copy command.';
+      }
+    });
+  }
+
   function filter() {
     const q = search.value.trim().toLowerCase();
     let visible = 0;
     for (const entry of entries) {
-      let show = !scope.value || entry.dataset.purpose === scope.value;
+      let show = scope.value === 'findings' ? Boolean(entry.querySelector('.issue-count')) :
+        !scope.value || entry.dataset.purpose === scope.value;
       if (show && q) {
         if (!searchText.has(entry)) searchText.set(entry, entry.textContent.toLowerCase());
         show = searchText.get(entry).includes(q);

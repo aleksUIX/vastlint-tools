@@ -34,7 +34,7 @@ fn explains_namespaced_elements_and_keeps_private_extensions_opaque() {
 fn reports_wrapper_and_inline_separately_and_leaves_creative_markup_inert() {
     let xml = r#"<VAST version="3.0"><Ad id="hop"><Wrapper><VASTAdTagURI>https://example.org/next</VASTAdTagURI></Wrapper></Ad><Ad><InLine><AdTitle>&lt;script&gt;</AdTitle><Creatives><Creative><CompanionAds><Companion><HTMLResource><![CDATA[</script><img src=x>]]></HTMLResource></Companion></CompanionAds></Creative></Creatives></InLine></Ad></VAST>"#;
     let report = String::from_utf8(explain(xml).stdout).unwrap();
-    assert_eq!(report.matches("<article class=ad>").count(), 2);
+    assert_eq!(report.matches("<article class=ad data-ad=").count(), 4);
     assert!(report.contains("Next tag · "));
     assert!(report.contains("a companion surface"));
     assert!(report.contains("&lt;/script&gt;&lt;img src=x&gt;"));
@@ -151,4 +151,71 @@ fn recognizes_inline_media_and_keeps_other_schemes_inert() {
     assert!(html.contains("data-kind='audio' data-mime='audio/wav' data-inline"));
     assert!(!html.contains(" data-remote>"));
     assert_eq!(html.matches("class=asset-action type=button").count(), 1);
+}
+
+#[test]
+fn trafficking_counts_exact_references_per_ad_and_separates_destinations() {
+    let xml = r#"<VAST version="4.2"><Ad id="one"><InLine><Creatives><Creative><NonLinearAds><NonLinear width="960" height="540"><StaticResource creativeType="image/jpeg">https://assets.test/a?k=1</StaticResource><NonLinearClickThrough>https://brand.test</NonLinearClickThrough></NonLinear></NonLinearAds></Creative></Creatives><Extensions><Extension type="ctv_ad_portfolio"><MediaFiles><MediaFile>https://assets.test/a?k=1</MediaFile><MediaFile>https://assets.test/a?k=2</MediaFile></MediaFiles></Extension></Extensions><Impression>https://metrics.test/one</Impression></InLine></Ad><Ad id="two"><Wrapper><VASTAdTagURI>https://wrap.test/two</VASTAdTagURI></Wrapper></Ad></VAST>"#;
+    let report = String::from_utf8(explain(xml).stdout).unwrap();
+    let handoff = report
+        .split("<section id=delivery")
+        .nth(1)
+        .unwrap()
+        .split("</section>")
+        .next()
+        .unwrap();
+    let ops = report
+        .split("<section id=trafficking")
+        .nth(1)
+        .unwrap()
+        .split("</section>")
+        .next()
+        .unwrap();
+    let (one, two) = ops.split_once("<article class=ad data-ad=2>").unwrap();
+    assert!(one.contains("2 distinct file references across 3 declarations"));
+    assert!(one.contains("Slot 960 × 540"));
+    assert!(one.contains("https://brand.test"));
+    assert!(one.contains("1 impression declaration in this response"));
+    assert!(!two.contains("assets.test"));
+    assert!(two.contains("https://wrap.test/two"));
+    assert!(two.contains("0 impression declarations"));
+    assert!(!one.contains("wrap.test"));
+    assert_eq!(
+        handoff
+            .matches("Can you share the downstream response")
+            .count(),
+        1
+    );
+    assert_eq!(handoff.matches("Does creative review accept").count(), 1);
+    assert!(!handoff.contains("Which target players support this SIMID"));
+}
+
+#[test]
+fn located_finding_links_back_to_its_exact_minified_xml_row() {
+    let report = String::from_utf8(explain(r#"<VAST version="4.2"><Ad><InLine><AdTitle>Hé</AdTitle><AdSystem>ads</AdSystem></InLine></Ad></VAST>"#).stdout).unwrap();
+    let rule = "VAST-2.0-adsystem-no-version";
+    let row = report
+        .split("<details class=entry id=e")
+        .skip(1)
+        .map(|s| s.split("</details>").next().unwrap())
+        .find(|s| s.contains(rule))
+        .unwrap();
+    let (element_id, _) = row.split_once(' ').unwrap();
+    assert!(row.contains("class=issue-count"));
+    assert!(row.contains(">AdSystem</b>"));
+    let (anchor, _) = row
+        .split("class=row-finding><a href='#f")
+        .find(|s| s.contains(rule) && s.starts_with(|c: char| c.is_ascii_digit()))
+        .unwrap()
+        .split_once('\'')
+        .unwrap();
+    let card = report
+        .split(&format!("class=finding id=f{anchor}>"))
+        .nth(1)
+        .unwrap()
+        .split("</div>")
+        .next()
+        .unwrap();
+    assert!(card.contains(rule));
+    assert!(card.contains(&format!("href='#e{element_id}'")));
 }

@@ -226,3 +226,16 @@ footer { margin-block: 15px; }
 }
 .asset-preview audio { width: min(100%, 420px); }
 .asset-preview figcaption { margin-top: 4px; }
+
+.issue-count { display: inline-block; border-radius: 4px; padding: 0 5px; background: #f9ebd4; color: #6b4211; font-size: 11px; }
+.row-finding { margin-block: 6px; border-inline-start: 2px solid #bb8739; padding-inline-start: 9px; }
+.finding:target { border-color: var(--focus); }
+.questions { margin: 4px 0; padding-inline-start: 20px; }
+.questions li + li { margin-top: 5px; }
+.copy-handoff { margin-top: 13px; }
+.copy-status, .resource-count { color: var(--muted); font-size: 12px; }
+.copy-status { margin-inline-start: 8px; }
+.resource-count { margin-bottom: 6px; }
+@media (max-width: 480px) {
+  .views { flex-wrap: wrap; }
+}

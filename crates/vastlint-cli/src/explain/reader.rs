@@ -106,7 +106,6 @@ pub(super) fn row(
     if let Some(preview) = preview {
         preview.card(out, embeds);
     }
-    out.push_str("</span></summary>");
 }
 
 fn annotation(out: &mut String, n: Element<'_>, desc: &str) {
@@ -196,7 +195,7 @@ fn annotation(out: &mut String, n: Element<'_>, desc: &str) {
 /// A repeated URL only identifies a fallback pair when both declarations belong
 /// to the same creative. Keep the one-line overview conservative for ad pods
 /// and exports with alternative resources.
-fn shared_pause_image<'a>(body: Element<'a>, ix: &Index<'_>) -> Option<Element<'a>> {
+pub(super) fn shared_pause_image<'a>(body: Element<'a>, ix: &Index<'_>) -> Option<Element<'a>> {
     let one = |group, key| {
         let mut candidates = Element::children(&group)
             .filter(move |n| n.is_element() && name(*n) == key && ix.recognized(*n));
