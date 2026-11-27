@@ -6,10 +6,23 @@ use vastlint_core::{Issue, ValidationResult};
 
 use super::{assets::Embedded, guide};
 
+#[path = "player.rs"]
+mod player;
 #[path = "reader.rs"]
 mod reader;
 
 type Element<'a> = Node<'a, 'a>;
+
+// HTML normalizes literal CR and CRLF on parsing. Encode CR in the original source view
+// so copying XML (including CDATA and multiline attributes) preserves its line endings.
+fn raw_source(out: &mut String, text: &str) {
+    for (i, part) in text.split('\r').enumerate() {
+        if i > 0 {
+            out.push_str("&#13;");
+        }
+        write!(out, "{}", H(part)).unwrap();
+    }
+}
 
 // XML is untrusted, including element values, namespace names and filenames.
 pub(super) struct H<'a>(pub(super) &'a str);
@@ -202,7 +215,7 @@ pub(super) fn render(label: &str, xml: &str, embeds: &mut Embedded) -> std::io::
     )
     .unwrap();
     if let Some(ix) = &index {
-        write!(out,"<a href='#elements'>Annotated XML <small>{}</small></a><a href='#delivery'>Partner handoff</a><a href='#trafficking'>Trafficking</a>",ix.nodes.len()).unwrap();
+        write!(out,"<a href='#elements'>Annotated XML <small>{}</small></a><a href='#player'>QA player</a><a href='#delivery'>Partner handoff</a><a href='#trafficking'>Trafficking</a>",ix.nodes.len()).unwrap();
     }
     write!(
         out,
@@ -211,7 +224,7 @@ pub(super) fn render(label: &str, xml: &str, embeds: &mut Embedded) -> std::io::
     )
     .unwrap();
     if let Some(ix) = &index {
-        out.push_str("<section id=elements class=panel aria-label='Annotated XML'><div class=tools hidden><label class=search><span aria-hidden=true>⌕</span><input id=query aria-label='Search elements, values and behavior' type=search placeholder='Find an element, value or behavior'></label><select id=scope aria-label='Filter by purpose'><option value=''>All elements</option><option value='findings'>With findings</option><option>Delivery</option><option>Creative</option><option>Placement</option><option>Measurement</option><option>Interaction</option><option>Verification</option><option>Extension</option></select><output id=matches aria-live=polite></output></div><div class=sheet><div class=colheads><span>XML source</span><span>Player behavior</span></div><div id=entries>");
+        out.push_str("<section id=elements class=panel aria-label='Annotated XML'><div class=xml-actions><a href='#source'>Show full XML</a><label hidden id=wrap-control><input type=checkbox id=wrap-lines> Wrap XML lines</label></div><div class=tools hidden><label class=search><span aria-hidden=true>⌕</span><input id=query aria-label='Search elements, values and behavior' type=search placeholder='Find an element, value or behavior'></label><select id=scope aria-label='Filter by purpose'><option value=''>All elements</option><option value='findings'>With findings</option><option>Delivery</option><option>Creative</option><option>Placement</option><option>Measurement</option><option>Interaction</option><option>Verification</option><option>Extension</option></select><output id=matches aria-live=polite></output></div><div class=sheet><div class=colheads><span>XML source</span><span>Player behavior</span></div><div id=entries>");
         let mut located = HashMap::<usize, Vec<(usize, &Issue)>>::new();
         for (i, issue) in result.issues.iter().enumerate() {
             if let Some(node) = ix.finding_node(issue) {
@@ -229,6 +242,7 @@ pub(super) fn render(label: &str, xml: &str, embeds: &mut Embedded) -> std::io::
             );
         }
         out.push_str("</div><p id=empty hidden>No matching elements. <button type=button id=clear>Clear filters</button></p></div></section>");
+        player::panel(&mut out, &ads, ix);
         for view in [AdView::Partner, AdView::Trafficking] {
             out.push_str(match view {
                 AdView::Partner => "<section id=delivery class=panel><h2>Partner handoff</h2>",
@@ -246,16 +260,20 @@ pub(super) fn render(label: &str, xml: &str, embeds: &mut Embedded) -> std::io::
         }
     }
     findings(&mut out, &result, index.as_ref());
-    out.push_str("<section id=source class=panel><h2>Raw XML</h2><pre tabindex=0><code>");
+    out.push_str("<section id=source class=panel><h2>Raw XML</h2><div class=xml-actions>");
+    if index.is_some() {
+        out.push_str("<a href='#elements'>Show annotated XML</a>");
+    }
+    out.push_str("<button type=button id=copy-xml hidden>Copy full XML</button><span role=status></span></div><pre tabindex=0><code>");
     let mut offset = 0;
     if let Some(ix) = &index {
         for &n in &ix.nodes {
             let start = n.range().start;
             let end = start + 1 + qualified(n, xml).len();
+            raw_source(&mut out, &xml[offset..start]);
             write!(
                 out,
-                "{}<span id=s{number}><a href='#e{number}'>{}</a></span>",
-                H(&xml[offset..start]),
+                "<span id=s{number}><a href='#e{number}'>{}</a></span>",
                 H(&xml[start..end]),
                 number = id(n)
             )
@@ -263,9 +281,10 @@ pub(super) fn render(label: &str, xml: &str, embeds: &mut Embedded) -> std::io::
             offset = end;
         }
     }
-    write!(out, "{}</code></pre></section></main>", H(&xml[offset..])).unwrap();
+    raw_source(&mut out, &xml[offset..]);
+    out.push_str("</code></pre></section></main>");
     embeds.write_payloads(&mut out)?;
-    write!(out,"<footer>Generated locally with VASTlint {}. The report includes the supplied XML.</footer><script>{}</script></body></html>",env!("CARGO_PKG_VERSION"),include_str!("report.js")).unwrap();
+    write!(out,"<footer>Generated locally with VASTlint {}. The report includes the supplied XML.</footer><script>{}\n{}</script></body></html>",env!("CARGO_PKG_VERSION"),include_str!("report.js"),include_str!("player.js")).unwrap();
     Ok(out)
 }
 

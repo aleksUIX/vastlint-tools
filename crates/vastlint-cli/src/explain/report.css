@@ -238,3 +238,34 @@ footer { margin-block: 15px; }
 @media (max-width: 480px) {
   .views { flex-wrap: wrap; }
 }
+.xml-actions, .qa-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 10px; }
+.xml-actions { font-size: 13px; }
+.xml-actions label, .guide-control { cursor: pointer; }
+.wrapped .snippet { white-space: pre-wrap; overflow-wrap: anywhere; }
+.player-intro { color: var(--muted); margin-bottom: 12px; }
+.qa-toolbar { align-items: end; }
+.qa-toolbar label:not(.guide-control) { display: grid; gap: 4px; font-weight: 600; min-width: 0; }
+.qa-toolbar select { max-width: 100%; width: 100%; }
+.guide-control { padding-bottom: 6px; }
+.qa-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(210px, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.qa-monitor { display: grid; place-items: center; padding: 12px; background: #182432; container-type: inline-size; }
+#qa-stage { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; width: min(100%, calc(var(--stage-ratio, 1.777778) * 48vh)); background: #0c131c; border: 1px solid #405260; overflow: hidden; color: #d1dce5; }
+#qa-placeholder { padding: 12px; font-size: 13px; text-align: center; }
+#qa-media { position: absolute; inset: 0; display: grid; place-items: center; }
+#qa-media img, #qa-media video { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+#qa-media audio { width: min(90%, 380px); }
+#qa-guide { position: absolute; inset: 5%; border: 1px dashed #fff; box-shadow: 0 0 0 1px #4c5260; pointer-events: none; }
+.qa-sidebar, .qa-log { padding: 14px; overflow-wrap: anywhere; }
+.qa-sidebar h3,.qa-log h3 { margin: 0 0 6px; font-size: 16px; }
+.qa-sidebar dl { margin: 12px 0; }
+.qa-sidebar dt { color: var(--muted); font-size: 12px; }
+.qa-sidebar dd { margin: 2px 0 8px; font-family: var(--mono); font-size: 13px; }
+#qa-load { background: #204d75; color: white; margin-top: 10px; }
+.qa-log { margin: 10px 0; border: 1px solid var(--line); border-radius: 7px; }
+#qa-events { padding: 0; list-style: none; max-height: 12em; overflow-y: auto; margin: 4px 0 0; }
+#qa-events li { padding: 4px 0; border-top: 1px solid var(--line); font: 12px/1.5 var(--mono); }
+#qa-copy-status textarea { width: 100%; min-height: 5em; }
+@media(max-width:720px) {
+  .qa-grid { grid-template-columns: 1fr; }
+  .qa-toolbar label:first-child { width: 100%; }
+}

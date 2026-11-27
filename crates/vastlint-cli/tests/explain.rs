@@ -219,3 +219,34 @@ fn located_finding_links_back_to_its_exact_minified_xml_row() {
     assert!(card.contains(rule));
     assert!(card.contains(&format!("href='#e{element_id}'")));
 }
+
+#[test]
+fn player_keeps_pod_assets_and_tracking_scoped_and_wrapper_unresolved() {
+    let xml = "<VAST version='4.2'>\r\n<Ad id='upstream'><Wrapper><VASTAdTagURI>https://wrapper.test/next</VASTAdTagURI></Wrapper></Ad><Ad id='second'><InLine><Creatives><Creative><Linear><Duration>00:00:12</Duration><TrackingEvents><Tracking event='midpoint'>https://track.test/m</Tracking></TrackingEvents><MediaFiles><MediaFile width='320' height='180' type='video/mp4'>https://cdn.test/file.mp4</MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>";
+    let report = String::from_utf8(explain(xml).stdout).unwrap();
+    let panel = report
+        .split_once("<section id=player")
+        .unwrap()
+        .1
+        .split_once("</section>")
+        .unwrap()
+        .0;
+    assert!(panel.contains("label='Ad 1 · upstream'></optgroup>"));
+    assert!(panel.contains("label='Ad 2 · second'><option"));
+    assert!(panel.contains("data-duration='00:00:12'"));
+    assert!(panel.contains("data-width='320' data-height='180'"));
+    assert!(panel.contains("Inspect wrapper URL"));
+    let owner = panel
+        .split_once("data-owner='")
+        .unwrap()
+        .1
+        .split_once('\'')
+        .unwrap()
+        .0;
+    assert!(panel.contains(&format!("data-owner='{owner}' data-event='midpoint'")));
+    assert!(report
+        .split_once("<section id=source")
+        .unwrap()
+        .1
+        .contains("&gt;&#13;\n"));
+}

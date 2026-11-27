@@ -8,6 +8,7 @@
   const matches = document.querySelector('#matches');
   const empty = document.querySelector('#empty');
   const searchText = new WeakMap();
+  const assets = new Map();
 
   // Resolve each URL from the declaring element, never from a tracking or click field.
   for (const card of document.querySelectorAll('.asset')) {
@@ -24,6 +25,7 @@
       source = file.localName === 'image' ? file.getAttribute('href') :
         'data:' + (card.dataset.mime || 'application/octet-stream') + ';base64,' + file.content.textContent;
     }
+    assets.set(entry.id, {kind, source, embedded, filename: card.querySelector('strong').textContent});
     let frame;
     let media;
     let message;
@@ -116,22 +118,59 @@
     entry.addEventListener('previewhide', stop);
   }
 
-  for (const button of document.querySelectorAll('.copy-handoff')) {
-    button.hidden = false;
-    button.addEventListener('click', async () => {
-      const brief = button.closest('.ad').querySelector('.brief');
-      const status = button.nextElementSibling;
-      try {
-        await navigator.clipboard.writeText(brief.innerText);
-        status.textContent = 'Handoff copied';
-      } catch {
+  async function copyText(text, status, content) {
+    try {
+      await navigator.clipboard.writeText(text);
+      status.textContent = 'Text copied';
+    } catch {
+      if (content) {
         const range = document.createRange();
-        range.selectNodeContents(brief);
+        range.selectNodeContents(content);
         const selection = window.getSelection();
         selection.removeAllRanges();
         selection.addRange(range);
-        status.textContent = 'Handoff selected. Use your copy command.';
+        status.textContent = 'Text selected. Use your copy command.';
+      } else {
+        const field = document.createElement('textarea');
+        field.readOnly = true;
+        field.value = text;
+        field.setAttribute('aria-label', 'QA notes to copy');
+        status.replaceChildren('Select and copy these notes.', field);
+        field.select();
       }
+    }
+  }
+
+  const studio = document.getElementById('qa-studio');
+  if (studio) {
+    const payload = document.querySelector('#source pre code').textContent;
+    const bytes = new TextEncoder().encode(JSON.stringify({sourceMode: 'xml', action: 'validate', payload}));
+    // Leave larger documents on the copy/paste path to keep the session URL portable.
+    if (bytes.length <= 48 * 1024) {
+      const encoded = btoa(Array.from(bytes, b => String.fromCharCode(b)).join(''));
+      studio.hash = 'session=' + encoded.replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
+      studio.textContent = 'Open full tag in SIMID Studio';
+      document.getElementById('studio-help').hidden = true;
+    }
+  }
+  const stopPlayer = setupQAPlayer(assets, copyText);
+  const wrap = document.getElementById('wrap-lines');
+  if (wrap) {
+    document.getElementById('wrap-control').hidden = false;
+    wrap.addEventListener('change', () => document.getElementById('entries').classList.toggle('wrapped', wrap.checked));
+  }
+  const copyXml = document.getElementById('copy-xml');
+  copyXml.hidden = false;
+  copyXml.addEventListener('click', () => {
+    const code = document.querySelector('#source pre code');
+    copyText(code.textContent, copyXml.nextElementSibling, code);
+  });
+
+  for (const button of document.querySelectorAll('.copy-handoff')) {
+    button.hidden = false;
+    button.addEventListener('click', () => {
+      const brief = button.closest('.ad').querySelector('.brief');
+      copyText(brief.innerText, button.nextElementSibling, brief);
     });
   }
 
@@ -162,6 +201,7 @@
   function showView(scroll) {
     const target = document.getElementById(location.hash.slice(1));
     const panel = target?.closest('.panel') || document.getElementById(navigation.dataset.first);
+    if (panel.id !== 'player') stopPlayer();
     if (panel.id !== 'elements') {
       for (const frame of document.querySelectorAll('.asset-preview:not([hidden])')) {
         frame.closest('.entry').dispatchEvent(new Event('previewhide'));
@@ -173,12 +213,17 @@
       else tab.removeAttribute('aria-current');
     }
     if (!target) return;
+    const playerOption = target.matches('#qa-asset option');
+    if (playerOption && !target.selected) {
+      target.selected = true;
+      target.closest('select').dispatchEvent(new Event('change'));
+    }
     if (target.classList.contains('entry')) {
       if (target.hidden) clearFilters();
       target.open = true;
     }
     if (scroll) {
-      const destination = target === panel ? navigation : target;
+      const destination = target === panel || playerOption ? navigation : target;
       destination.scrollIntoView({block: 'start'});
     }
   }

@@ -18,6 +18,8 @@ vastlint explain tag.xml --output report.html
 cat tag.xml | vastlint explain - > report.html
 ```
 
+Use **QA player** to load a declared image, video, or audio asset, switch viewport shapes, compare its actual dimensions and duration with the tag, and copy playback notes. The log links playback milestones to their tracking declarations. Remote media loads on request. SIMID protocol testing is available in SIMID Studio.
+
 Open the HTML directly in a browser or IDE preview. The annotated view pairs each XML element with its meaning for the player. It shows one row per element in source order, including a source line number for minified and multiline tags. Expand a row to see attributes and follow its source link. On narrow screens, the explanation appears directly under the XML. Use the purpose filter or search to isolate tracking, placement, and creative resources. Select **With findings** to see the affected declarations and their rule IDs. **Partner handoff** gives a copyable brief for each ad with questions about the declared placement, fallback, and player capabilities. **Trafficking** lists creative IDs, dimensions, file references, viewer destinations, and measurement for comparison with a booking. Findings and raw XML have their own views. With scripting disabled all views and native row disclosures remain readable.
 
 The report includes the input XML, including URLs, tokens and vendor payloads supplied in the tag. Opening the report runs offline. Image, video and audio declarations have a preview in their annotated XML row. **Load image**, **Load video** or **Load audio** requests that individual HTTPS media resource from the displayed host. The report leaves scripts, SIMID, frames, tracking beacons and wrapper URLs inert.
