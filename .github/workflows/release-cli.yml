@@ -109,15 +109,16 @@ jobs:
       - name: Publish the CLI archives
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release delete "$RELEASE_TAG" --yes
-          fi
-          gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes "VASTlint CLI ${RELEASE_TAG#cli-v}"
-          mapfile -t files < <(find artifacts -name '*.tar.gz' | sort)
+          mapfile -t files < <(find artifacts -type f -name '*.tar.gz' | sort)
           test "${#files[@]}" -eq 4
-          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+          else
+            gh release create "$RELEASE_TAG" "${files[@]}" --verify-tag --title "VASTlint CLI ${RELEASE_TAG#cli-v}" --notes "Release notes: https://github.com/$GH_REPO/blob/$RELEASE_TAG/CHANGELOG.md"
+          fi
   publish:
     name: Publish vastlint-cli
     needs: smoke-test
