@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "vastlint",
   "displayName": "VASTlint",
-  "version": "0.16.3",
+  "version": "0.16.4",
   "description": "Validate VAST, VMAP, and DAAST ad tags against IAB Tech Lab specs. Hosted MCP at https://vastlint.org/mcp. Auth none for public tools.",
   "author": {
     "name": "Aleksander Sekowski",

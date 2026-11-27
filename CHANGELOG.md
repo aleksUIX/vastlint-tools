@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.16.4]
 
 - Move `vastlint-cli` here and pin it, with the other applications, to published VASTlint 0.16.7.
 - Publish the CLI from `cli-vX.Y.Z` tags: the crate, release binaries, container image and Homebrew formula.
