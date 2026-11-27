@@ -15,6 +15,7 @@ use vastlint_core::{
 };
 
 mod contribute;
+mod explain;
 mod share;
 mod telemetry;
 
@@ -106,6 +107,14 @@ enum Command {
         /// redacted server-side before storage; samples are never public.
         #[arg(long)]
         contribute_sample: bool,
+    },
+    /// Explain one VAST document in a self-contained, offline HTML report.
+    Explain {
+        /// Local XML file, or - for standard input.
+        file: String,
+        /// Write a new HTML file. The default is stdout.
+        #[arg(short, long, visible_alias = "out", value_name = "HTML")]
+        output: Option<std::path::PathBuf>,
     },
     /// List all known rule IDs with their default severity
     Rules,
@@ -227,6 +236,7 @@ fn main() -> ExitCode {
                 contribute_sample,
             )
         }
+        Command::Explain { file, output } => explain::run(&file, output.as_deref()),
         Command::Rules => {
             run_rules();
             ExitCode::SUCCESS
