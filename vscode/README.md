@@ -3,7 +3,7 @@
 Created by [Aleksander Sekowski](https://github.com/aleksUIX).
 
 Inline linting for [IAB VAST](https://iabtechlab.com/standards/vast/) ad tags directly in VS Code.
-Supports VAST 2.0 through 4.4 with clean Problems entries, concise hovers, fix guidance, and direct docs links. Web validator and full documentation: [vastlint.org](https://vastlint.org)
+Supports VAST 2.0 through 4.4 with clean Problems entries, concise hovers, fix guidance, and direct docs links. Web tools and documentation: [VAST tag tester](https://vastlint.org/tester/) · [vastlint.org](https://vastlint.org)
 
 ## Features
 
