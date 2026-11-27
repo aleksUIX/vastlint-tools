@@ -5,7 +5,7 @@ Command line validator for IAB VAST, VMAP, and DAAST. It checks a tag, inspects 
 The binary is `vastlint`. It links the published `vastlint-core` crate and does not build the engine from a sibling checkout.
 
 ```sh
-cargo install --locked vastlint-cli && vastlint telemetry
+cargo install --locked --git https://github.com/aleksUIX/vastlint-tools --tag cli-v0.18.0 vastlint-cli && vastlint telemetry
 vastlint check tag.xml
 ```
 
