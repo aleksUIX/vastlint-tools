@@ -1,5 +1,10 @@
 # Changelog
 
+## CLI 0.19.0 (2026-11-26)
+
+- Follow links beside annotated VAST declarations to relevant reading on vastlint.org. The links contain only public topic names.
+- Review the full XML or scroll individual source lines, preview ad behavior in the QA player, and compare declared CTV placement and position with the booking.
+
 ## CLI 0.18.0 (2026-11-26)
 
 - Setup asks whether to send usage statistics and full tag XML. Press Enter to enable both or type N to opt out. Tags are used only for research and to improve VASTlint. [CLI data handling](https://vastlint.org/privacy/#cli-telemetry)
