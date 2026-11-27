@@ -141,6 +141,21 @@
     }
   }
 
+  for (const field of document.querySelectorAll('.booking-field')) {
+    const control = field.querySelector('select');
+    control.hidden = false;
+    const codes = new Set(Array.from(field.querySelectorAll('[data-code]'), node => node.dataset.code.replace(/^0+(?=\d+$)/, '')));
+    control.addEventListener('change', () => {
+      let verdict = '';
+      if (control.value) {
+        if (!codes.size) verdict = 'Missing from this response. Confirm the booking with the publisher.';
+        else if (codes.size > 1) verdict = 'Multiple declared values. Check which creative the booking applies to.';
+        else verdict = codes.has(control.value) ? 'Matches the booking.' : 'Differs from the booking.';
+      }
+      field.querySelector('output').textContent = verdict;
+    });
+  }
+
   const studio = document.getElementById('qa-studio');
   if (studio) {
     const payload = document.querySelector('#source pre code').textContent;

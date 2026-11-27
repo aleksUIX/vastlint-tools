@@ -10,6 +10,8 @@ use super::{assets::Embedded, guide};
 mod player;
 #[path = "reader.rs"]
 mod reader;
+#[path = "reading.rs"]
+mod reading;
 
 type Element<'a> = Node<'a, 'a>;
 
@@ -381,6 +383,7 @@ fn ad_card(out: &mut String, ad: Element<'_>, number: usize, ix: &Index<'_>, vie
                     );
                     out.push_str("</p>");
                 }
+                reading::booking(out, body, &members);
                 creatives(out, body, ix);
                 resources(out, &members);
                 if !destinations(out, &members) {
@@ -931,6 +934,9 @@ fn element(
     .unwrap();
     if let Some(parent) = n.parent_element() {
         link(out, parent, &format!("Parent · {}", qualified(parent, xml)));
+    }
+    if known {
+        reading::reading(out, n);
     }
     out.push_str("</div>");
     let children: Vec<_> = n.children().filter(Node::is_element).collect();

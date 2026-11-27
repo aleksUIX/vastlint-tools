@@ -269,3 +269,10 @@ footer { margin-block: 15px; }
   .qa-grid { grid-template-columns: 1fr; }
   .qa-toolbar label:first-child { width: 100%; }
 }
+
+.booking { margin-block: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 5px; }
+.booking summary { font-weight: 600; cursor: pointer; }
+.booking p { margin-block: 8px; color: var(--muted); }
+.booking-field { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-top: 6px; }
+.booking-field label { min-width: 140px; }
+.booking-field output { font-weight: 600; }

@@ -250,3 +250,19 @@ fn player_keeps_pod_assets_and_tracking_scoped_and_wrapper_unresolved() {
         .1
         .contains("&gt;&#13;\n"));
 }
+
+#[test]
+fn learning_links_use_public_vocabulary_and_ignore_private_payloads() {
+    let report = String::from_utf8(explain(r#"<VAST><Ad><InLine><Creatives><Creative><Linear><TrackingEvents><Tracking event="firstQuartile">https://private.test/token</Tracking><Tracking event="secret-partner-name">x</Tracking></TrackingEvents></Linear></Creative></Creatives><Extensions><Extension type="vendor"><pos>7</pos></Extension></Extensions></InLine></Ad></VAST>"#).stdout).unwrap();
+    let topics: Vec<_> = report
+        .split("href='https://vastlint.org/search/explain/")
+        .skip(1)
+        .map(|s| s.split_once('\'').unwrap().0)
+        .collect();
+    assert!(topics.contains(&"tracking-firstquartile/"));
+    assert!(topics.contains(&"tracking-events/"));
+    assert!(!topics.contains(&"on-screen-position/"));
+    assert!(topics
+        .iter()
+        .all(|s| !s.contains("private") && !s.contains("secret")));
+}
