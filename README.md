@@ -4,6 +4,8 @@ Created by [Aleksander Sekowski](https://github.com/aleksUIX).
 
 OpenAdTech applications and integrations built on the public [VASTlint engine](https://github.com/aleksUIX/vastlint). This repository owns the application source, tests and marketplace release pipelines. The engine and language bindings have their own releases.
 
+Generate a standalone, annotated VAST report with `vastlint explain tag.xml -o report.html`. [Walk through a pause ad report](https://vastlint.org/docs/explain-vast/)
+
 ## What the CLI shares
 
 When CLI sharing is enabled, `vastlint check` sends usage statistics and the full XML of checked tags to vastlint.org. We use those tags only for research and to improve VASTlint. At setup, press Enter to enable sharing or type N to opt out. To turn it off later, run `vastlint telemetry off`. [CLI data handling](https://vastlint.org/privacy/#cli-telemetry)
