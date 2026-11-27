@@ -58,7 +58,7 @@ button { cursor: pointer; }
 .entry summary::-webkit-details-marker { display: none; }
 .xmlcell { display: flex; align-items: baseline; min-width: 0; background: #fbfcfd; border-right: 1px solid var(--line); }
 .ln { width: 38px; flex: none; text-align: right; padding-right: 7px; color: #617284; font: 11px var(--mono); user-select: none; }
-.snippet { font-size: 12px; line-height: 1.5; color: #5a6470; padding: 5px 8px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snippet { font-size: 12px; line-height: 1.5; color: #5a6470; padding: 5px 8px; display: block; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; white-space: nowrap; }
 .d1 { padding-left: 16px; } .d2 { padding-left: 24px; } .d3 { padding-left: 32px; }
 .d4 { padding-left: 40px; } .d5 { padding-left: 48px; } .d6 { padding-left: 56px; } .d7 { padding-left: 64px; }
 .tag { color: #754195; font-weight: 600; }
@@ -69,7 +69,6 @@ button { cursor: pointer; }
 .entry summary:hover, .entry summary:hover .xmlcell { background: #f0f5ff; }
 .entry[open] summary, .entry[open] .xmlcell { background: #eaf2ff; }
 .entry[open] .xmlcell { box-shadow: inset 3px 0 #3268b2; }
-.entry[open] .snippet { white-space: pre-wrap; overflow-wrap: anywhere; }
 .inside { background: #f7f9fc; padding: 12px 18px 14px clamp(18px,4vw,50px); border-block: 1px solid var(--line); overflow-wrap: anywhere; }
 .detailhead { margin-bottom: 4px; }
 .detailhead span, .references a, .children, dd small { font-size: 12px; color: var(--muted); }

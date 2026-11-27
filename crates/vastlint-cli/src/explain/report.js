@@ -184,6 +184,14 @@
   }
 
   if (search) {
+    document.getElementById('entries').addEventListener('keydown', event => {
+      if (!event.target.matches('.entry > summary') || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      const code = event.target.querySelector('.snippet');
+      if (code.scrollWidth <= code.clientWidth) return;
+      event.preventDefault();
+      code.scrollLeft += event.key === 'ArrowRight' ? 64 : -64;
+    });
     document.querySelector('.tools').hidden = false;
     search.addEventListener('input', filter);
     scope.addEventListener('change', filter);
