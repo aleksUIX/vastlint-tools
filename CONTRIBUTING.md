@@ -21,7 +21,7 @@ bash test/mcp-release-smoke.sh
 
 Each extension and example has its own lockfile. Run `npm ci` in the directory being changed. Build and test Chrome with `npm run build` and `npm test`; build and test the IDE extension with `npm test` and `npm run bundle`. Build each frontend example with `npm run build`.
 
-Applications consume the engine version pinned in `core-version.txt`. Keep that pin and all consumer manifests and lockfiles coordinated. A tool release may use a different version from its engine dependency. See [RELEASE.md](RELEASE.md) for publishing.
+The CLI and the other applications consume the engine version pinned in `core-version.txt`. Keep that pin and all consumer manifests and lockfiles coordinated. An application release may use a different version from its engine dependency. CLI releases use `cli-vX.Y.Z` tags. See [RELEASE.md](RELEASE.md) for publishing.
 
 ## Submit changes with attribution and tests.
 

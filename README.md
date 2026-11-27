@@ -6,16 +6,17 @@ OpenAdTech applications and integrations built on the public [VASTlint engine](h
 
 ## The applications use a published engine release.
 
-`core-version.txt` records the engine version used by the MCP server, browser extension, IDE extension and frontend runtime. Their manifests pin published packages rather than a sibling source checkout.
+`core-version.txt` records the engine version used by the CLI, MCP server, browser extension, IDE extension and frontend runtime. Their manifests pin published packages rather than a sibling source checkout.
 
 - [Chrome extension](chrome/README.md): page inspection and browser workflows.
 - [VS Code extension](vscode/README.md): inline editor validation, also published to Open VSX.
+- [CLI](crates/vastlint-cli/README.md): the `vastlint` binary.
 - [MCP server](crates/vastlint-mcp/README.md): validation tools for AI agents.
 - [VAST client runtime](packages/vastlint-client/README.md): sessions, playback and tracking.
 - [React bindings](packages/vastlint-react/README.md): hooks for the client runtime.
 - [Browser and React examples](examples): application integration examples.
 
-The Rust engine, CLI daemon, FFI, WASM binding, gRPC reference server and language bindings remain in the [engine repository](https://github.com/aleksUIX/vastlint) and its binding repositories. Java continues to use the public gRPC server. Erlang's OTP path continues to use the public CLI daemon.
+The `vastlint` CLI lives in this repository and links the published engine. The Rust engine, FFI, WASM binding, gRPC reference server and language bindings remain in the [engine repository](https://github.com/aleksUIX/vastlint) and its binding repositories. Java continues to use the public gRPC server. Erlang's OTP path continues to use the public CLI daemon.
 
 ## Build and test the applications.
 
@@ -53,7 +54,7 @@ Agent integrations are provided by [plugin.json](plugin.json), [.claude-plugin](
 
 ## Product releases are independent of engine releases.
 
-Tools use their own version tags. A tools release does not publish `vastlint-core`, the engine npm package, the CLI, the gRPC server or the language bindings.
+Application tags publish the extensions, MCP server and frontend packages. Tags of the form `cli-vX.Y.Z` publish `vastlint-cli`, its binaries, the CLI container image and the Homebrew formula. The engine crate, engine npm package, gRPC server and language bindings stay in the engine repository.
 
 Marketplace publisher accounts and existing extension IDs stay with Aleksander Sekowski. See [RELEASE.md](RELEASE.md) for publishing configuration, versioning and the migration of credentials and trusted publishers.
 

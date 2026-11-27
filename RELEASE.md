@@ -4,7 +4,7 @@ Created by Aleksander Sekowski.
 
 ## Keep engine and application versions separate.
 
-`core-version.txt` pins the published engine used by the applications. The same exact version appears in the Rust MCP dependency and the npm dependencies of the extensions, client runtime and examples. Run `npm run check:core` after updating these pins and regenerate the affected Cargo and npm lockfiles.
+`core-version.txt` pins the published engine used by the applications. The same exact version appears in the Rust CLI and MCP dependencies and the npm dependencies of the extensions, client runtime and examples. Run `npm run check:core` after updating these pins and regenerate the affected Cargo and npm lockfiles.
 
 Tools tags use `vMAJOR.MINOR.PATCH`. The release workflow stamps the application and MCP package versions without changing their engine dependency. Client and React packages receive the tools version. React depends on the corresponding client release.
 
@@ -36,7 +36,7 @@ Preserve the prior release approval policy: patch releases use the `patch` envir
 
 The release workflow runs MCP protocol checks, builds the four native MCP archives, tests and stages frontend packages, and builds the Chrome archive and VSIX. The release gate precedes publication. GitHub provenance covers the packaged application artifacts. Marketplace publication uses the built extension artifacts.
 
-The engine npm package, crates.io engine and CLI crates, gRPC image, native FFI/NIF artifacts, binding synchronization, Homebrew synchronization and engine-to-infrastructure synchronization remain in the engine release workflow.
+The engine npm package, the `vastlint-core` crate, the gRPC image, native FFI/NIF artifacts, binding synchronization and engine-to-infrastructure synchronization remain in the engine release workflow. `cli-vX.Y.Z` tags in this repository publish `vastlint-cli`, the CLI binaries, `aleksuix/vastlint` and the Homebrew formula. That workflow reads `ENABLE_CRATES_PUBLISH`, `ENABLE_DOCKER_PUBLISH` and `ENABLE_HOMEBREW_TAP_SYNC`, and it needs `CARGO_REGISTRY_TOKEN`, `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `VASTLINT_HOMEBREW_TAP_DEPLOY_KEY` and `BOT_GPG_KEY` in this repository.
 
 A tools contribution can be agreed separately in the future. Keeping this repository public does not transfer its publisher accounts or assign ownership of the tools to another organization.
 

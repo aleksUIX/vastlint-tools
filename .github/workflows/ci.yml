@@ -95,6 +95,27 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Dependency review
         uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec
+  cli-smoke:
+    name: CLI smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0  # v2.9.3
+      - name: Build vastlint
+        run: cargo build --release -p vastlint-cli
+      - name: Check a valid tag and reject a broken one
+        run: |
+          valid='<VAST version="4.1"><Ad id="1"><InLine><AdSystem>Example</AdSystem><AdTitle>Ad</AdTitle><AdServingId>abc</AdServingId><Impression><![CDATA[https://t.example.com/i]]></Impression><Creatives><Creative><UniversalAdId idRegistry="ad-id.org">UID</UniversalAdId><Linear><Duration>00:00:15</Duration><TrackingEvents><Tracking event="start"><![CDATA[https://t.example.com/s]]></Tracking><Tracking event="firstQuartile"><![CDATA[https://t.example.com/q1]]></Tracking><Tracking event="midpoint"><![CDATA[https://t.example.com/m]]></Tracking><Tracking event="thirdQuartile"><![CDATA[https://t.example.com/q3]]></Tracking><Tracking event="complete"><![CDATA[https://t.example.com/c]]></Tracking></TrackingEvents><MediaFiles><MediaFile delivery="progressive" type="video/mp4" width="640" height="360"><![CDATA[https://cdn.example.com/a.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>'
+          printf '%s' "$valid" | ./target/release/vastlint check - --format json >/dev/null
+          set +e
+          printf '%s' '<VAST version="4.1"><Ad>' | ./target/release/vastlint check - --format json >/dev/null
+          code=$?
+          set -e
+          test "$code" -ne 0
   mcp-smoke:
     name: MCP smoke test
     runs-on: ubuntu-latest

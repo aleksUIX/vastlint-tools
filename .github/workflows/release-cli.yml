@@ -1,0 +1,246 @@
+name: Release CLI
+'on':
+  push:
+    tags:
+      - cli-v[0-9]+.[0-9]+.[0-9]+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing cli-vX.Y.Z tag to build and publish
+        type: string
+        required: true
+permissions:
+  contents: read
+env:
+  CARGO_TERM_COLOR: always
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+jobs:
+  smoke-test:
+    name: Test the CLI against the published core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - name: Require a cli-vX.Y.Z tag
+        run: |
+          case "$RELEASE_TAG" in
+            cli-v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "tag must look like cli-v1.2.3, got $RELEASE_TAG"; exit 1 ;;
+          esac
+          version="${RELEASE_TAG#cli-v}"
+          crate=$(python3 -c 'import tomllib; print(tomllib.load(open("crates/vastlint-cli/Cargo.toml","rb"))["package"]["version"])')
+          test "$crate" = "$version"
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
+      - name: Test the workspace
+        run: cargo test --workspace --locked
+      - name: Smoke the CLI on stdin
+        run: |
+          cargo build --release -p vastlint-cli
+          valid='<VAST version="4.1"><Ad id="1"><InLine><AdSystem>Example</AdSystem><AdTitle>Ad</AdTitle><AdServingId>abc</AdServingId><Impression><![CDATA[https://t.example.com/i]]></Impression><Creatives><Creative><UniversalAdId idRegistry="ad-id.org">UID</UniversalAdId><Linear><Duration>00:00:15</Duration><TrackingEvents><Tracking event="start"><![CDATA[https://t.example.com/s]]></Tracking><Tracking event="firstQuartile"><![CDATA[https://t.example.com/q1]]></Tracking><Tracking event="midpoint"><![CDATA[https://t.example.com/m]]></Tracking><Tracking event="thirdQuartile"><![CDATA[https://t.example.com/q3]]></Tracking><Tracking event="complete"><![CDATA[https://t.example.com/c]]></Tracking></TrackingEvents><MediaFiles><MediaFile delivery="progressive" type="video/mp4" width="640" height="360"><![CDATA[https://cdn.example.com/a.mp4]]></MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST>'
+          printf '%s' "$valid" | ./target/release/vastlint check - --format json >/dev/null
+          set +e
+          printf '%s' '<VAST version="4.1"><Ad>' | ./target/release/vastlint check - --format json >/dev/null
+          code=$?
+          set -e
+          test "$code" -ne 0
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    needs: smoke-test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: vastlint-linux-x86_64.tar.gz
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: vastlint-linux-aarch64.tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: vastlint-macos-x86_64.tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: vastlint-macos-aarch64.tar.gz
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - name: Install musl tools (Linux)
+        if: contains(matrix.target, 'musl')
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y musl-tools
+      - name: Set up cross toolchain (Linux aarch64)
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        uses: taiki-e/setup-cross-toolchain-action@12b7ad4acfa95a1476779d6c06699b96ec1691f8
+        with:
+          target: ${{ matrix.target }}
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} -p vastlint-cli
+      - name: Package
+        run: |
+          tar czf "${{ matrix.archive }}" -C "target/${{ matrix.target }}/release" vastlint -C "$GITHUB_WORKSPACE" LICENSE NOTICE
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish the CLI archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release delete "$RELEASE_TAG" --yes
+          fi
+          gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes "VASTlint CLI ${RELEASE_TAG#cli-v}"
+          mapfile -t files < <(find artifacts -name '*.tar.gz' | sort)
+          test "${#files[@]}" -eq 4
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+  publish:
+    name: Publish vastlint-cli
+    needs: smoke-test
+    runs-on: ubuntu-latest
+    if: vars.ENABLE_CRATES_PUBLISH == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+      - name: Publish vastlint-cli
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          version="${RELEASE_TAG#cli-v}"
+          http=$(curl -s -o /dev/null -w "%{http_code}" -A vastlint-release \
+            "https://crates.io/api/v1/crates/vastlint-cli/${version}")
+          if [ "$http" = "200" ]; then
+            echo "vastlint-cli ${version} already published, skipping"
+          else
+            cargo publish -p vastlint-cli
+          fi
+  publish-docker:
+    name: Publish the CLI image
+    needs: smoke-test
+    runs-on: ubuntu-latest
+    if: vars.ENABLE_DOCKER_PUBLISH == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Image version
+        id: version
+        run: echo "version=${RELEASE_TAG#cli-v}" >> "$GITHUB_OUTPUT"
+      - name: Build and push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        with:
+          context: .
+          file: Dockerfile.cli
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            aleksuix/vastlint:latest
+            aleksuix/vastlint:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+  sync-homebrew-tap:
+    name: Sync homebrew-tap
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    if: vars.ENABLE_HOMEBREW_TAP_SYNC == 'true'
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          path: cli-artifacts
+          merge-multiple: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: aleksUIX/homebrew-tap
+          ssh-key: ${{ secrets.VASTLINT_HOMEBREW_TAP_DEPLOY_KEY }}
+          path: homebrew-tap
+      - name: Update the vastlint formula
+        env:
+          TAG: ${{ env.RELEASE_TAG }}
+          FORMULA: homebrew-tap/Formula/vastlint.rb
+        run: |
+          VERSION="${TAG#cli-v}"
+          declare -A ARCHIVES=(
+            [SHA_MACOS_ARM64]=vastlint-macos-aarch64.tar.gz
+            [SHA_MACOS_X86_64]=vastlint-macos-x86_64.tar.gz
+            [SHA_LINUX_ARM64]=vastlint-linux-aarch64.tar.gz
+            [SHA_LINUX_X86_64]=vastlint-linux-x86_64.tar.gz
+          )
+          for KEY in "${!ARCHIVES[@]}"; do
+            FILE="cli-artifacts/${ARCHIVES[$KEY]}"
+            test -f "$FILE"
+            VALUE=$(sha256sum "$FILE" | awk '{print $1}')
+            export "$KEY=$VALUE"
+          done
+          export VERSION
+          ruby <<'RUBY'
+          formula_path = ENV.fetch('FORMULA')
+          version = ENV.fetch('VERSION')
+          replacements = {
+            'vastlint-macos-aarch64.tar.gz' => ENV.fetch('SHA_MACOS_ARM64'),
+            'vastlint-macos-x86_64.tar.gz' => ENV.fetch('SHA_MACOS_X86_64'),
+            'vastlint-linux-aarch64.tar.gz' => ENV.fetch('SHA_LINUX_ARM64'),
+            'vastlint-linux-x86_64.tar.gz' => ENV.fetch('SHA_LINUX_X86_64'),
+          }
+          content = File.read(formula_path)
+          content = content.sub(/version\s+"[^"]+"/, "version \"#{version}\"")
+          replacements.each do |archive, checksum|
+            pattern = %r{(url "https://github\.com/aleksUIX/vastlint(?:-tools)?/releases/download/)(?:cli-)?v[^/]+(/#{Regexp.escape(archive)}"\n\s+sha256 ")[0-9a-f]{64}(")}
+            updated = content.sub(pattern) do
+              "url \"https://github.com/aleksUIX/vastlint-tools/releases/download/cli-v#{version}#{$2}#{checksum}#{$3}"
+            end
+            raise "failed to update #{archive} in #{formula_path}" if updated == content
+            content = updated
+          end
+          File.write(formula_path, content)
+          RUBY
+      - name: Validate formula syntax
+        run: ruby -c homebrew-tap/Formula/vastlint.rb
+      - name: Import bot GPG key
+        run: |
+          echo "${{ secrets.BOT_GPG_KEY }}" | gpg --batch --import
+          echo "AEA67F4C8B714AC26E14ACDB67DF23E270B033DB:6:" | gpg --import-ownertrust
+      - name: Commit and push
+        run: |
+          cd homebrew-tap
+          git config user.name "vastlint release bot"
+          git config user.email "bot@vastlint.org"
+          git config user.signingkey "67DF23E270B033DB"
+          git config commit.gpgsign true
+          git add Formula/vastlint.rb
+          git diff --cached --quiet && echo "nothing to commit" && exit 0
+          git commit -S -m "chore: update vastlint formula to ${RELEASE_TAG}"
+          git push origin main

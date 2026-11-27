@@ -6,8 +6,10 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const version = fs.readFileSync(path.join(root, 'core-version.txt'), 'utf8').trim();
 assert.match(version, /^\d+\.\d+\.\d+$/);
-const manifest = fs.readFileSync(path.join(root, 'crates/vastlint-mcp/Cargo.toml'), 'utf8');
-assert.match(manifest, new RegExp(`^vastlint-core = "=${version.replaceAll('.', '\\.')}"$`, 'm'));
+for (const crate of ['vastlint-mcp', 'vastlint-cli']) {
+  const manifest = fs.readFileSync(path.join(root, 'crates', crate, 'Cargo.toml'), 'utf8');
+  assert.match(manifest, new RegExp(`^vastlint-core = "=${version.replaceAll('.', '\\.')}"$`, 'm'), `${crate} must pin the published engine`);
+}
 const cargoLock = fs.readFileSync(path.join(root, 'Cargo.lock'), 'utf8');
 const corePackage = cargoLock.split('[[package]]').find(entry => /^name = "vastlint-core"$/m.test(entry));
 assert.ok(corePackage, 'Cargo.lock must include the published engine');

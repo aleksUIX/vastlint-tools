@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/vastlint-mcp"]
+members = ["crates/vastlint-mcp", "crates/vastlint-cli"]
 resolver = "2"
 
 [workspace.package]

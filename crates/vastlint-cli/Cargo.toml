@@ -1,0 +1,29 @@
+[package]
+name = "vastlint-cli"
+version = "0.16.7"
+edition = "2021"
+rust-version = "1.86"
+authors = ["Aleksander Sekowski <aleks@vastlint.org>"]
+description = "VAST XML validator and inspector: validate, inspect wrapper chains, and auto-fix IAB VAST 2.0–4.4 ad tags"
+license = "Apache-2.0"
+repository = "https://github.com/aleksUIX/vastlint-tools"
+homepage = "https://vastlint.org"
+readme = "README.md"
+keywords = ["vast", "xml", "validator", "simid", "ctv"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "vastlint"
+path = "src/main.rs"
+
+[dependencies]
+vastlint-core = "=0.16.7"
+# High-throughput allocator. Removes system-allocator contention when
+# validating many large VAST documents concurrently.
+mimalloc = { version = "0.1", default-features = false }
+clap = { version = "4", features = ["derive"] }
+anstream = "1.0"
+anstyle = "1"
+toml = { version = "1.1", default-features = false, features = ["parse", "serde"] }
+ureq = { version = "2", default-features = false, features = ["tls"] }
+regex = { version = "1", default-features = false, features = ["std"] }

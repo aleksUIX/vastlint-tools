@@ -52,7 +52,7 @@
     "access": "public"
   },
   "dependencies": {
-    "vastlint": "0.16.6"
+    "vastlint": "0.16.7"
   },
   "devDependencies": {
     "typescript": "^7.0.2"
