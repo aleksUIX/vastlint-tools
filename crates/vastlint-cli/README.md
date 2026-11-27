@@ -18,7 +18,7 @@ vastlint explain tag.xml --output report.html
 cat tag.xml | vastlint explain - > report.html
 ```
 
-Open the HTML directly in a browser or IDE preview. It describes each ad, its creative resources, declared placement and measurement events. Select an item to inspect its attributes and jump to its opening tag in the original XML. Search is available with JavaScript enabled. The report and expandable element descriptions also work without JavaScript.
+Open the HTML directly in a browser or IDE preview. The annotated view pairs each XML element with its meaning for the player. It shows one row per element in source order, including a source line number for minified and multiline tags. Expand a row to see attributes and follow its source link. On narrow screens, the explanation appears directly under the XML. Use the purpose filter or search to isolate tracking, placement, and creative resources. Ad behavior, validation findings, and the original XML have their own views. With scripting disabled all views and native row disclosures remain readable.
 
 The report includes the input XML, including URLs, tokens and vendor payloads supplied in the tag. It runs offline. Creative code, media files, tracking beacons and downstream wrappers are never loaded. Placement diagrams illustrate declared geometry. Vendor-specific elements retain their names, values and source locations.
 

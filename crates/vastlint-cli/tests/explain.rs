@@ -71,9 +71,7 @@ fn output_can_be_regenerated_and_input_cannot_be_overwritten() {
         assert!(result.status.success());
         assert!(result.stdout.is_empty());
     }
-    assert!(std::fs::read_to_string(&html)
-        .unwrap()
-        .contains("Source XML"));
+    assert!(std::fs::read_to_string(&html).unwrap().contains("Raw XML"));
     assert_eq!(run(&file).status.code(), Some(2));
     assert_eq!(std::fs::read_to_string(file).unwrap(), xml);
 }
@@ -88,4 +86,21 @@ fn ctv_portfolio_resolves_fallback_only_for_the_bound_creative() {
     assert!(!String::from_utf8(explain(&unbound).stdout)
         .unwrap()
         .contains("can still use"));
+}
+
+#[test]
+fn annotated_rows_show_exact_source_tokens_and_decode_their_behavior() {
+    let xml = r#"<VAST version='2.0'><Ad><InLine><Extensions><Extension
+ type='ctv_ad_portfolio'><pos>7</pos><plcmt>5</plcmt></Extension></Extensions><AdTitle id="x>y">A &amp; B</AdTitle></InLine></Ad></VAST>"#;
+    let report = String::from_utf8(explain(xml).stdout).unwrap();
+    assert!(report.contains("<h1>Fullscreen pause ad</h1>"));
+    assert!(report.contains("On-screen position · <b>Fullscreen</b>"));
+    assert!(report.contains("class=lit>&quot;x&gt;y&quot;</span>"));
+    assert!(report.contains("<span class=text>A &amp;amp; B</span>"));
+    assert!(report.contains("title='Source line 2'"));
+    assert_eq!(
+        report.matches("class=xmlcell").count(),
+        report.matches("class=annotation").count()
+    );
+    assert!(report.contains("id=scope"));
 }

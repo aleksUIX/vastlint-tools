@@ -6,6 +6,9 @@ use vastlint_core::ValidationResult;
 
 use super::guide;
 
+#[path = "reader.rs"]
+mod reader;
+
 type Element<'a> = Node<'a, 'a>;
 
 // XML is untrusted, including element values, namespace names and filenames.
@@ -143,7 +146,7 @@ impl<'a> Index<'a> {
 pub(super) fn render(label: &str, xml: &str) -> String {
     let result = vastlint_core::validate(xml);
     let mut out = String::from("<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\">");
-    write!(out,"<title>{} | VAST explanation</title><style>{}</style></head><body><header><a class=brand href='#overview'>VAST<span>lint</span></a><span class=filename>{}</span></header><main id=overview><h1>VAST explanation</h1>",H(label),include_str!("report.css"),H(label)).unwrap();
+    write!(out,"<title>{} | VASTlint</title><style>{}</style></head><body><header class=topbar><div class=topinner><a class=brand href='#elements'>VAST<span>lint</span></a><span class=slash>/</span><span>Explain</span><span class=slash>/</span><code class=filename>{}</code></div></header><main>",H(label),include_str!("report.css"),H(label)).unwrap();
     let parsed = Document::parse_with_options(
         xml,
         ParsingOptions {
@@ -164,43 +167,56 @@ pub(super) fn render(label: &str, xml: &str) -> String {
         }
     };
     let index = doc.map(|d| Index::new(d, xml));
-    if let (Some(d), Some(ix)) = (doc, &index) {
-        let root = d.root_element();
-        let ads: Vec<_> = root
-            .children()
-            .filter(|n| n.is_element() && name(*n) == "Ad" && ix.recognized(*n))
-            .collect();
-        write!(
-            out,
-            "<p class=lead>{} · {} · {} · {}</p>",
-            H(&format!(
-                "{} {}",
-                qualified(root, xml),
-                root.attribute("version").unwrap_or("(version unspecified)")
-            )),
-            quantity(ads.len(), "ad"),
-            quantity(ix.nodes.len(), "element"),
-            quantity(result.issues.len(), "validation finding")
-        )
-        .unwrap();
-        out.push_str("<nav aria-label='Report sections'><a href='#delivery'>Ad delivery</a><a href='#findings'>Validation</a><a href='#elements'>Element explorer</a><a href='#source'>Source XML</a></nav><section id=delivery><h2>Ad delivery</h2>");
+    let ads: Vec<_> = doc
+        .zip(index.as_ref())
+        .map(|(d, ix)| {
+            d.root_element()
+                .children()
+                .filter(|n| n.is_element() && name(*n) == "Ad" && ix.recognized(*n))
+                .collect()
+        })
+        .unwrap_or_default();
+    reader::overview(
+        &mut out,
+        &ads,
+        index.as_ref(),
+        doc.map(|d| d.root_element()),
+    );
+    let first = if index.is_some() {
+        "elements"
+    } else {
+        "findings"
+    };
+    write!(
+        out,
+        "<nav class=views aria-label='Report views' data-first='{first}'>"
+    )
+    .unwrap();
+    if let Some(ix) = &index {
+        write!(out,"<a href='#elements'>Annotated XML <small>{}</small></a><a href='#delivery'>Ad behavior <small>{}</small></a>",ix.nodes.len(),ads.len()).unwrap();
+    }
+    write!(
+        out,
+        "<a href='#findings'>Findings <small>{}</small></a><a href='#source'>Raw XML</a></nav>",
+        result.issues.len()
+    )
+    .unwrap();
+    if let Some(ix) = &index {
+        out.push_str("<section id=elements class=panel aria-label='Annotated XML'><div class=tools hidden><label class=search><span aria-hidden=true>⌕</span><input id=query aria-label='Search elements, values and behavior' type=search placeholder='Find an element, value or behavior'></label><select id=scope aria-label='Filter by purpose'><option value=''>All elements</option><option>Delivery</option><option>Creative</option><option>Placement</option><option>Measurement</option><option>Interaction</option><option>Verification</option><option>Extension</option></select><output id=matches aria-live=polite></output></div><div class=sheet><div class=colheads><span>XML source</span><span>Player behavior</span></div><div id=entries>");
+        for &n in &ix.nodes {
+            element(&mut out, n, ix, xml);
+        }
+        out.push_str("</div><p id=empty hidden>No matching elements. <button type=button id=clear>Clear filters</button></p></div></section><section id=delivery class=panel><h2>Ad behavior</h2>");
         if ads.is_empty() {
             out.push_str("<p>No top-level VAST ad is declared.</p>");
         }
-        for (i, ad) in ads.into_iter().enumerate() {
+        for (i, &ad) in ads.iter().enumerate() {
             ad_card(&mut out, ad, i + 1, ix);
         }
         out.push_str("</section>");
     }
     findings(&mut out, &result, index.as_ref());
-    if let Some(ix) = &index {
-        out.push_str("<section id=elements><h2>Element explorer</h2><p>Open an element to inspect its attributes and values. Source links select its opening tag.</p><div class=filter hidden><label for=query>Find an element</label><input id=query type=search placeholder='Name, attribute, event or URL'><output id=matches aria-live=polite></output></div><div id=entries>");
-        for &n in &ix.nodes {
-            element(&mut out, n, ix, xml);
-        }
-        out.push_str("</div></section>");
-    }
-    out.push_str("<section id=source><h2>Source XML</h2><pre tabindex=0><code>");
+    out.push_str("<section id=source class=panel><h2>Raw XML</h2><pre tabindex=0><code>");
     let mut offset = 0;
     if let Some(ix) = &index {
         for &n in &ix.nodes {
@@ -620,7 +636,7 @@ fn measurement(out: &mut String, members: &[Element<'_>]) {
     }
 }
 fn findings(out: &mut String, result: &ValidationResult, index: Option<&Index<'_>>) {
-    out.push_str("<section id=findings><h2>Validation</h2>");
+    out.push_str("<section id=findings class=panel><h2>Validation findings</h2>");
     let summary = &result.summary;
     write!(
         out,
@@ -680,7 +696,8 @@ fn element(out: &mut String, n: Element<'_>, ix: &Index<'_>, xml: &str) {
     } else {
         generic
     };
-    write!(out,"<details class=entry id=e{number}><summary><code>{}</code><span>{}</span><small>L{line}</small></summary><div class=inside><p>{}</p>",H(qualified(n,xml)),H(n.attribute("event").or(n.attribute("type")).or(n.attribute("id")).unwrap_or("")),H(desc)).unwrap();
+    reader::row(out, n, ix, xml, desc);
+    write!(out,"<div class=inside><div class=detailhead><strong>{}</strong><span>{} · line {line}</span></div><p>{}</p>",H(qualified(n,xml)),reader::purpose(n,ix),H(desc)).unwrap();
     if known && key == "Tracking" {
         if let Some(ev) = n.attribute("event") {
             write!(out, "<p><b>{}</b> · {}</p>", H(ev), guide::event(ev)).unwrap();
